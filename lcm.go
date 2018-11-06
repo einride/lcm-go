@@ -73,6 +73,7 @@ func (lc *LCM) Publish(channel string, data []byte) error {
 	defer lc.publishMutex.Unlock()
 	binary.BigEndian.PutUint32(lc.publishBuffer[0:], shortHeaderMagic)
 	binary.BigEndian.PutUint32(lc.publishBuffer[4:], lc.publishSequenceNumber)
+	lc.publishSequenceNumber++
 	copy(lc.publishBuffer[shortHeaderSize:], []byte(channel))
 	lc.publishBuffer[shortHeaderSize+channelSize] = 0
 	copy(lc.publishBuffer[shortHeaderSize+channelSize+1:], data)
