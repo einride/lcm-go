@@ -2,11 +2,10 @@ package lcm_test
 
 import (
 	"encoding/binary"
-	"net"
-	"testing"
-
 	"github.com/einride/lcm-go"
 	"github.com/stretchr/testify/require"
+	"net"
+	"testing"
 )
 
 func TestLCM_Publish(t *testing.T) {
@@ -52,5 +51,47 @@ func TestLCM_Publish_Multiple(t *testing.T) {
 		_, _, err := conn.ReadFromUDP(data)
 		require.NoError(t, err)
 		require.Equal(t, uint32(i), binary.BigEndian.Uint32(data[4:]))
+	}
+}
+
+func TestLCM_ReadMessage(t *testing.T) {
+	go func() {
+		lc, err := lcm.Create("udpm://239.255.76.67:7667")
+		require.NoError(t, err)
+		require.NoError(t, lc.Publish("channel", []byte("payload")))
+		require.NoError(t, lc.Close())
+	}()
+	addr, err := net.ResolveUDPAddr("udp", "239.255.76.67:7667")
+	require.NoError(t, err)
+	reader, err := net.ListenMulticastUDP("udp", nil, addr)
+	require.NoError(t, err)
+	m, err := lcm.ReadMessage(reader)
+	require.NoError(t, err)
+	require.Equal(t, uint32(0), m.Sequence)
+	require.Equal(t, "channel", m.Topic)
+	expected := []byte("payload")
+	require.Equal(t, expected, m.Data)
+}
+
+func TestLCM_ReadMessage_Multiple(t *testing.T) {
+	n := 100
+	go func() {
+		lc, err := lcm.Create("udpm://239.255.76.67:7667")
+		require.NoError(t, err)
+		for i := 0; i < n; i++ {
+			require.NoError(t, lc.Publish("channel", []byte("payload")))
+		}
+		require.NoError(t, lc.Close())
+	}()
+	addr, err := net.ResolveUDPAddr("udp", "239.255.76.67:7667")
+	require.NoError(t, err)
+	reader, err := net.ListenMulticastUDP("udp", nil, addr)
+	require.NoError(t, err)
+	for i := 0; i < n; i++ {
+		m, err := lcm.ReadMessage(reader)
+		require.NoError(t, err)
+		require.Equal(t, uint32(i), m.Sequence)
+		expected := []byte("payload")
+		require.Equal(t, expected, m.Data)
 	}
 }
