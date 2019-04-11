@@ -1,13 +1,12 @@
-all: go-test
+all: mod-tidy go-test
 
 include build/rules.mk
 build/rules.mk:
 	git submodule update --init --recursive
 
-.PHONY: dep-ensure
-dep-ensure: $(DEP)
-	$(DEP) ensure -v
+.PHONY: mod-tidy
+	go mod tidy
 
 .PHONY: go-test
-go-test: dep-ensure
+go-test:
 	go test -race -cover ./...
