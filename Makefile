@@ -1,13 +1,21 @@
-all: go-test
+all: \
+    mod-tidy \
+    go-test
+
+export GO111MODULE = on
+
+.PHONY: build
+build:
+	@git submodule update --init --recursive $@
 
 include build/rules.mk
-build/rules.mk:
-	git submodule update --init --recursive
+build/rules.mk: build
+	@# Included in submodule: build
 
-.PHONY: dep-ensure
-dep-ensure: $(DEP)
-	$(DEP) ensure -v
+.PHONY: mod-tidy
+mod-tidy:
+	go mod tidy
 
 .PHONY: go-test
-go-test: dep-ensure
+go-test:
 	go test -race -cover ./...
