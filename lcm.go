@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
+	"golang.org/x/xerrors"
 )
 
 // field fixed lengths.
@@ -67,11 +67,11 @@ type Message struct {
 // NewTransmitter creates a transmitter instance.
 func NewTransmitter(addr *net.UDPAddr) (*Transmitter, error) {
 	if !addr.IP.IsMulticast() {
-		return nil, errors.New("addr is not a multicast address")
+		return nil, xerrors.New("new transmitter: addr is not a multicast address")
 	}
 	conn, err := net.DialUDP("udp", nil, addr)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to dial ip")
+		return nil, xerrors.Errorf("new transmitter: %w", err)
 	}
 	return &Transmitter{conn: conn}, nil
 }
@@ -80,11 +80,11 @@ func NewTransmitter(addr *net.UDPAddr) (*Transmitter, error) {
 func (t *Transmitter) Publish(m *Message) error {
 	channelSize := len(m.Channel)
 	if channelSize > maxChannelNameLength {
-		return errors.Errorf("channel name too big: %v bytes", channelSize)
+		return xerrors.Errorf("channel name too big: %v bytes", channelSize)
 	}
 	payloadSize := channelSize + 1 + len(m.Data)
 	if payloadSize > shortMessageMaxSize {
-		return errors.Errorf("payload (channel + data) too big: %v bytes", payloadSize)
+		return xerrors.Errorf("payload (channel + data) too big: %v bytes", payloadSize)
 	}
 	t.publishMutex.Lock()
 	defer t.publishMutex.Unlock()
@@ -96,26 +96,32 @@ func (t *Transmitter) Publish(m *Message) error {
 	copy(t.publishBuffer[indexOfChannelName+channelSize+1:], m.Data)
 	packetSize := shortHeaderSize + payloadSize
 	if _, err := t.conn.Write(t.publishBuffer[:packetSize]); err != nil {
-		return errors.Wrap(err, "publish")
+		return xerrors.Errorf("publish: %w", err)
 	}
 	return nil
 }
 
 // SetWriteDeadline sets the write deadline for the transmitter.
 func (t *Transmitter) SetWriteDeadline(time time.Time) error {
-	return errors.WithStack(t.conn.SetWriteDeadline(time))
+	if err := t.conn.SetWriteDeadline(time); err != nil {
+		return xerrors.Errorf("set write deadline: %w", err)
+	}
+	return nil
 }
 
 // Close the transmitter connection.
 func (t *Transmitter) Close() error {
-	return errors.WithStack(t.conn.Close())
+	if err := t.conn.Close(); err != nil {
+		return xerrors.Errorf("close: %w", err)
+	}
+	return nil
 }
 
 // NewListener creates a listener instance.
 func NewListener(addr *net.UDPAddr) (*Listener, error) {
 	conn, err := net.ListenMulticastUDP("udp", nil, addr)
 	if err != nil {
-		return nil, errors.Wrap(err, "addr is not a multicast address")
+		return nil, xerrors.Errorf("new listener: %w", err)
 	}
 	return &Listener{conn: conn}, nil
 }
@@ -125,34 +131,40 @@ func (l *Listener) Receive(m *Message) error {
 	data := make([]byte, shortMessageMaxSize+shortHeaderSize)
 	n, err := l.conn.Read(data)
 	if err != nil {
-		return errors.Wrap(err, "receive")
+		return xerrors.Errorf("receive: %w", err)
 	}
 	return m.Unmarshal(data[:n])
 }
 
 // SetReadDeadline sets the read deadline for the listener.
 func (l *Listener) SetReadDeadline(time time.Time) error {
-	return errors.WithStack(l.conn.SetReadDeadline(time))
+	if err := l.conn.SetReadDeadline(time); err != nil {
+		return xerrors.Errorf("set read deadline: %w", err)
+	}
+	return nil
 }
 
 // Close the listener connection.
 func (l *Listener) Close() error {
-	return errors.WithStack(l.conn.Close())
+	if err := l.conn.Close(); err != nil {
+		return xerrors.Errorf("close: %w", err)
+	}
+	return nil
 }
 
 // Unmarshal an LCM message.
 func (m *Message) Unmarshal(data []byte) error {
 	if len(data) < 8 {
-		return errors.Errorf("to small to be an LCM message: %v", len(data))
+		return xerrors.Errorf("to small to be an LCM message: %v", len(data))
 	}
 	header := binary.BigEndian.Uint32(data[indexOfShortHeaderMagic:shortHeaderMagicSize])
 	if header != shortHeaderMagic {
-		return errors.Errorf("invalid header magic: %v", header)
+		return xerrors.Errorf("invalid header magic: %v", header)
 	}
 	sequence := binary.BigEndian.Uint32(data[indexOfShortHeaderSequence:shortHeaderSize])
 	i := bytes.IndexByte(data[indexOfChannelName:], 0)
 	if i == -1 {
-		return errors.New("invalid format for channel name, couldn't find string-termination")
+		return xerrors.New("invalid format for channel name, couldn't find string-termination")
 	}
 	indexOfPayload := i + indexOfChannelName + 1
 	m.Channel = string(data[indexOfChannelName : indexOfPayload-1])
