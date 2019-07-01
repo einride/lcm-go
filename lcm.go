@@ -51,8 +51,10 @@ type Transmitter struct {
 }
 
 // Listener represents an LCM Listener instance.
+// Not thread-safe.
 type Listener struct {
 	conn *net.UDPConn
+	data []byte
 }
 
 // Message represents an LCM message.
@@ -121,17 +123,19 @@ func NewListener(addr *net.UDPAddr) (*Listener, error) {
 	if err != nil {
 		return nil, xerrors.Errorf("new listener: %w", err)
 	}
-	return &Listener{conn: conn}, nil
+	return &Listener{
+		conn: conn,
+		data: make([]byte, shortMessageMaxSize+shortHeaderSize),
+	}, nil
 }
 
 // Receive reads data from the listener and populates the message provided.
 func (l *Listener) Receive(m *Message) error {
-	data := make([]byte, shortMessageMaxSize+shortHeaderSize)
-	n, err := l.conn.Read(data)
+	n, err := l.conn.Read(l.data)
 	if err != nil {
 		return xerrors.Errorf("receive: %w", err)
 	}
-	return m.Unmarshal(data[:n])
+	return m.Unmarshal(l.data[:n])
 }
 
 // SetReadDeadline sets the read deadline for the listener.
