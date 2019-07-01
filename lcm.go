@@ -32,10 +32,8 @@ const (
 	maxChannelNameLength = 63 // 64 including null byte
 )
 
-const (
-	// shortHeaderMagic is the uint32 magic number signifying a short LCM message.
-	shortHeaderMagic = 0x4c433032
-)
+// shortHeaderMagic is the uint32 magic number signifying a short LCM message.
+const shortHeaderMagic = 0x4c433032
 
 // field start indices.
 const (
