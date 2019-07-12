@@ -1,42 +1,102 @@
 package lcm
 
 import (
-	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnmarshal(t *testing.T) {
-	msg := Message{}
-	t.Run("empty_data", func(t *testing.T) {
-		err := msg.Unmarshal(make([]byte, 0))
-		require.Equal(t, "to small to be an LCM message: 0", err.Error())
-	})
-	t.Run("bad_header_magic", func(t *testing.T) {
-		data, n := createMessageData("channel", "payload")
-		binary.BigEndian.PutUint32(data[indexOfShortHeaderMagic:], 0x00000000)
-		err := msg.Unmarshal(data[:n])
-		require.Equal(t, "invalid header magic: 0", err.Error())
-	})
-	t.Run("non_terminated_channel", func(t *testing.T) {
-		data, n := createMessageData("channel", "payload")
-		data[shortHeaderSize+len([]byte("channel"))] = 1
-		err := msg.Unmarshal(data[:n])
-		require.Equal(t, "invalid format for channel name, couldn't find string-termination", err.Error())
-	})
+func TestMessage_MarshalUnmarshal(t *testing.T) {
+	for _, tt := range []struct {
+		msg     string
+		data    []byte
+		message Message
+	}{
+		{
+			msg: "no payload",
+			data: []byte{
+				0x4c, 0x43, 0x30, 0x32, // short header magic
+				0x12, 0x34, 0x56, 0x78, // sequence number
+				'a', 0x00, // channel
+			},
+			message: Message{
+				SequenceNumber: 0x12345678,
+				Channel:        "a",
+				Data:           []byte{},
+			},
+		},
+		{
+			msg: "payload",
+			data: []byte{
+				0x4c, 0x43, 0x30, 0x32, // short header magic
+				0x12, 0x34, 0x56, 0x78, // sequence number
+				'a', 'b', 'c', 0x00, // channel
+				0x01, 0x02, 0x03, // payload
+			},
+			message: Message{
+				SequenceNumber: 0x12345678,
+				Channel:        "abc",
+				Data:           []byte{0x01, 0x02, 0x03},
+			},
+		},
+	} {
+		tt := tt
+		t.Run(tt.msg, func(t *testing.T) {
+			t.Run("marshal", func(t *testing.T) {
+				var data [lengthOfLargestUDPMessage]byte
+				n, err := tt.message.marshal(data[:])
+				require.NoError(t, err)
+				require.Equal(t, len(tt.data), n)
+				require.Equal(t, tt.data, data[:n])
+			})
+			t.Run("unmarshal", func(t *testing.T) {
+				var msg Message
+				require.NoError(t, msg.unmarshal(tt.data))
+				require.Equal(t, tt.message, msg)
+			})
+		})
+	}
 }
 
-func createMessageData(channel string, payload string) ([]byte, int) {
-	data := make([]byte, shortHeaderSize+shortMessageMaxSize)
-	c := []byte(channel)
-	channelSize := len(channel)
-	p := []byte(payload)
-	binary.BigEndian.PutUint32(data[indexOfShortHeaderMagic:], shortHeaderMagic)
-	binary.BigEndian.PutUint32(data[indexOfShortHeaderSequence:], uint32(0))
-	copy(data[indexOfChannelName:], c)
-	data[shortHeaderSize+channelSize] = 0
-	copy(data[indexOfChannelName+channelSize+1:], p)
-	size := shortHeaderSize + channelSize + 1 + len(p)
-	return data, size
+func TestMessage_Unmarshal_Errors(t *testing.T) {
+	for _, tt := range []struct {
+		msg  string
+		data []byte
+		err  string
+	}{
+		{
+			msg: "invalid size",
+			data: []byte{
+				0x4c, 0x43, 0x30, 0x32, // short header magic
+				0x12, 0x34, 0x56,
+			},
+			err: "insufficient data: 7 bytes",
+		},
+		{
+			msg: "invalid channel",
+			data: []byte{
+				0x4c, 0x43, 0x30, 0x32, // short header magic
+				0x12, 0x34, 0x56, 0x78, // sequence number
+				'a', 'b', 'c', 'd', // channel (missing null byte)
+			},
+			err: "invalid channel: not null-terminated",
+		},
+		{
+			msg: "invalid magic",
+			data: []byte{
+				0xde, 0xad, 0xbe, 0xef, // short header magic
+				0x12, 0x34, 0x56, 0x78, // sequence number
+				'a', 'b', 'c', 'd', // channel (missing null byte)
+			},
+			err: "wrong header magic: 0xdeadbeef",
+		},
+	} {
+		tt := tt
+		t.Run(tt.msg, func(t *testing.T) {
+			var msg Message
+			err := msg.unmarshal(tt.data)
+			require.NotNil(t, err)
+			require.Equal(t, tt.err, err.Error())
+		})
+	}
 }
