@@ -1,93 +1,87 @@
 package lcm
 
 import (
-	"net"
+	"context"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
+	mock_lcm "github.com/einride/lcm-go/test/mocks"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/xerrors"
 )
 
-func TestNewTransmitter(t *testing.T) {
-	t.Run("good_ip", func(t *testing.T) {
-		addr, err := net.ResolveUDPAddr("udp", multicastIp)
-		require.NoError(t, err)
-		transmitter, err := NewTransmitter(addr)
-		require.NoError(t, err)
-		require.NoError(t, transmitter.Close())
-	})
-	t.Run("bad_ip", func(t *testing.T) {
-		addr, err := net.ResolveUDPAddr("udp", nonMulticastIp)
-		require.NoError(t, err)
-		_, err = NewTransmitter(addr)
-		require.Error(t, err)
-	})
+func TestTransmitter_Close(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	w := mock_lcm.NewMockUDPWriter(ctrl)
+	tx := NewTransmitter(w)
+	err := errors.New("foo")
+	w.EXPECT().Close().Return(err)
+	require.Equal(t, err, tx.Close())
 }
 
-func TestSetWriteDeadline(t *testing.T) {
-	addr, err := net.ResolveUDPAddr("udp", multicastIp)
-	require.NoError(t, err)
-	transmitter, err := NewTransmitter(addr)
-	require.NoError(t, err)
-	t.Run("time_in_past", func(t *testing.T) {
-		pastTime := time.Now()
-		time.Sleep(sleepDuration)
-		require.NoError(t, transmitter.SetWriteDeadline(pastTime))
-	})
-	t.Run("time_now", func(t *testing.T) {
-		require.NoError(t, transmitter.SetWriteDeadline(time.Now()))
-	})
-	t.Run("time_in_future", func(t *testing.T) {
-		require.NoError(t, transmitter.SetWriteDeadline(time.Now().Add(10*time.Hour)))
-	})
-	t.Run("closed_conn", func(t *testing.T) {
-		require.NoError(t, transmitter.conn.Close())
-		require.Error(t, transmitter.SetWriteDeadline(time.Now()))
-	})
-}
-
-func TestTransmitterClose(t *testing.T) {
-	addr, err := net.ResolveUDPAddr("udp", multicastIp)
-	require.NoError(t, err)
-	transmitter, err := NewTransmitter(addr)
-	require.NoError(t, err)
-	t.Run("open_conn", func(t *testing.T) {
-		require.NoError(t, transmitter.Close())
-		require.Error(t, transmitter.conn.Close())
-	})
-	t.Run("closed_conn", func(t *testing.T) {
-		transmitter, err = NewTransmitter(addr)
-		require.NoError(t, err)
-		require.NoError(t, transmitter.conn.Close())
-		require.Error(t, transmitter.Close())
-	})
-}
-
-func TestPublish(t *testing.T) {
-	addr, err := net.ResolveUDPAddr("udp", multicastIp)
-	require.NoError(t, err)
-	transmitter, err := NewTransmitter(addr)
-	defer func() {
-		require.NoError(t, transmitter.Close())
-	}()
-	msg := Message{
-		Channel: "channel",
-		Data:    []byte("data"),
+func TestTransmitter_Transmit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	w := mock_lcm.NewMockUDPWriter(ctrl)
+	tx := NewTransmitter(w)
+	deadline := time.Unix(0, 1)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+	expected := []byte{
+		0x4c, 0x43, 0x30, 0x32, // short header magic
+		0x00, 0x00, 0x00, 0x00, // sequence number
+		'f', 'o', 'o', 0x00, // channel
+		0x01, 0x02, 0x03, // payload
 	}
-	t.Run("too_big_data", func(t *testing.T) {
-		badMsg := msg
-		badMsg.Data = make([]byte, shortMessageMaxSize)
-		require.Error(t, transmitter.Publish(&badMsg))
+	w.EXPECT().SetWriteDeadline(deadline)
+	w.EXPECT().Write(gomock.Any()).Do(func(data []byte) {
+		require.Equal(t, expected, data)
 	})
-	t.Run("too_big_channel", func(t *testing.T) {
-		bs := make([]byte, maxChannelNameLength+1)
-		badMsg := msg
-		badMsg.Channel = string(bs)
-		require.Error(t, transmitter.Publish(&badMsg))
-	})
-	t.Run("sequence_number", func(t *testing.T) {
-		require.Equal(t, uint32(0), transmitter.publishSequenceNumber)
-		require.NoError(t, transmitter.Publish(&msg))
-		require.Equal(t, uint32(1), transmitter.publishSequenceNumber)
-	})
+	require.NoError(t, tx.Transmit(ctx, "foo", []byte{0x01, 0x02, 0x03}))
+}
+
+func TestTransmitter_Transmit_WriteError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	w := mock_lcm.NewMockUDPWriter(ctrl)
+	tx := NewTransmitter(w)
+	err := errors.New("boom")
+	w.EXPECT().SetWriteDeadline(time.Time{})
+	w.EXPECT().Write(gomock.Any()).Return(0, err)
+	require.True(t, xerrors.Is(tx.Transmit(context.Background(), "foo", []byte{}), err))
+}
+
+func TestTransmitter_DeadlineError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	w := mock_lcm.NewMockUDPWriter(ctrl)
+	tx := NewTransmitter(w)
+	deadline := time.Unix(0, 1)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+	err := errors.New("boom")
+	w.EXPECT().SetWriteDeadline(deadline).Return(err)
+	require.True(t, xerrors.Is(tx.Transmit(ctx, "foo", []byte{}), err))
+}
+
+func TestTransmitter_Transmit_BadChannel(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	w := mock_lcm.NewMockUDPWriter(ctrl)
+	tx := NewTransmitter(w)
+	badChannel := strings.Repeat("a", lengthOfLongestChannel+1)
+	require.Error(t, tx.Transmit(context.Background(), badChannel, []byte{}))
+}
+
+func TestTransmitter_Transmit_BadData(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	w := mock_lcm.NewMockUDPWriter(ctrl)
+	tx := NewTransmitter(w)
+	badData := make([]byte, lengthOfLargestPayload+1)
+	require.Error(t, tx.Transmit(context.Background(), "foo", badData))
 }

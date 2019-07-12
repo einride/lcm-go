@@ -1,71 +1,58 @@
 package lcm
 
 import (
-	"encoding/binary"
-	"net"
-	"sync"
+	"context"
 	"time"
 
 	"golang.org/x/xerrors"
 )
 
+// UDPWriter is an interface for a connection that an LCM Transmitter can write messages to.
+type UDPWriter interface {
+	Write([]byte) (int, error)
+	SetWriteDeadline(time.Time) error
+	Close() error
+}
+
 // Transmitter represents an LCM Transmitter instance.
 type Transmitter struct {
-	conn                  *net.UDPConn
-	publishMutex          sync.Mutex
-	publishSequenceNumber uint32
-	publishBuffer         [shortHeaderSize + shortMessageMaxSize]byte
+	w              UDPWriter
+	sequenceNumber uint32
+	buf            [lengthOfLargestUDPMessage]byte
+	msg            Message
 }
 
-// NewTransmitter creates a transmitter instance.
-func NewTransmitter(addr *net.UDPAddr) (*Transmitter, error) {
-	if !addr.IP.IsMulticast() {
-		return nil, xerrors.New("new transmitter: addr is not a multicast address")
-	}
-	conn, err := net.DialUDP("udp", nil, addr)
+// NewTransmitter creates a new LCM transmitter.
+func NewTransmitter(w UDPWriter) *Transmitter {
+	return &Transmitter{w: w}
+}
+
+// Transmit an LCM message.
+//
+// If the provided context has a deadline, it will be propagated to the underlying write operation.
+func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte) error {
+	t.msg.Data = data
+	t.msg.Channel = channel
+	t.msg.SequenceNumber = t.sequenceNumber
+	t.sequenceNumber++
+	n, err := t.msg.marshal(t.buf[:])
 	if err != nil {
-		return nil, xerrors.Errorf("new transmitter: %w", err)
+		return xerrors.Errorf("transmit: %w", err)
 	}
-	return &Transmitter{conn: conn}, nil
-}
-
-// Publish an LCM message.
-func (t *Transmitter) Publish(m *Message) error {
-	channelSize := len(m.Channel)
-	if channelSize > maxChannelNameLength {
-		return xerrors.Errorf("channel name too big: %v bytes", channelSize)
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		deadline = time.Time{}
 	}
-	payloadSize := channelSize + 1 + len(m.Data)
-	if payloadSize > shortMessageMaxSize {
-		return xerrors.Errorf("payload (channel + data) too big: %v bytes", payloadSize)
+	if err := t.w.SetWriteDeadline(deadline); err != nil {
+		return xerrors.Errorf("transmit: %w", err)
 	}
-	t.publishMutex.Lock()
-	defer t.publishMutex.Unlock()
-	binary.BigEndian.PutUint32(t.publishBuffer[indexOfShortHeaderMagic:], shortHeaderMagic)
-	binary.BigEndian.PutUint32(t.publishBuffer[indexOfShortHeaderSequence:], t.publishSequenceNumber)
-	t.publishSequenceNumber++
-	copy(t.publishBuffer[indexOfChannelName:], []byte(m.Channel))
-	t.publishBuffer[shortHeaderSize+channelSize] = 0
-	copy(t.publishBuffer[indexOfChannelName+channelSize+1:], m.Data)
-	packetSize := shortHeaderSize + payloadSize
-	if _, err := t.conn.Write(t.publishBuffer[:packetSize]); err != nil {
-		return xerrors.Errorf("publish: %w", err)
-	}
-	return nil
-}
-
-// SetWriteDeadline sets the write deadline for the transmitter.
-func (t *Transmitter) SetWriteDeadline(time time.Time) error {
-	if err := t.conn.SetWriteDeadline(time); err != nil {
-		return xerrors.Errorf("set write deadline: %w", err)
+	if _, err := t.w.Write(t.buf[:n]); err != nil {
+		return xerrors.Errorf("transmit: %w", err)
 	}
 	return nil
 }
 
 // Close the transmitter connection.
 func (t *Transmitter) Close() error {
-	if err := t.conn.Close(); err != nil {
-		return xerrors.Errorf("close: %w", err)
-	}
-	return nil
+	return t.w.Close()
 }
