@@ -39,10 +39,7 @@ func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte)
 	if err != nil {
 		return xerrors.Errorf("transmit: %w", err)
 	}
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		deadline = time.Time{}
-	}
+	deadline, _ := ctx.Deadline()
 	if err := t.w.SetWriteDeadline(deadline); err != nil {
 		return xerrors.Errorf("transmit: %w", err)
 	}
