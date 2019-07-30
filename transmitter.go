@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"golang.org/x/xerrors"
 )
 
@@ -19,6 +20,7 @@ type Transmitter struct {
 	w              UDPWriter
 	sequenceNumber uint32
 	buf            [lengthOfLargestUDPMessage]byte
+	protoBuf       proto.Buffer
 	msg            Message
 }
 
@@ -27,7 +29,7 @@ func NewTransmitter(w UDPWriter) *Transmitter {
 	return &Transmitter{w: w}
 }
 
-// Transmit an LCM message.
+// Transmit a raw payload.
 //
 // If the provided context has a deadline, it will be propagated to the underlying write operation.
 func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte) error {
@@ -47,6 +49,15 @@ func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte)
 		return xerrors.Errorf("transmit: %w", err)
 	}
 	return nil
+}
+
+// TransmitProto transmits a protobuf message.
+func (t *Transmitter) TransmitProto(ctx context.Context, channel string, m proto.Message) error {
+	t.protoBuf.Reset()
+	if err := t.protoBuf.Marshal(m); err != nil {
+		return xerrors.Errorf("transmit proto: %w", err)
+	}
+	return t.Transmit(ctx, channel, t.protoBuf.Bytes())
 }
 
 // Close the transmitter connection.
