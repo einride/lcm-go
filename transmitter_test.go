@@ -9,6 +9,7 @@ import (
 
 	mock_lcm "github.com/einride/lcm-go/test/mocks"
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/xerrors"
 )
@@ -42,6 +43,28 @@ func TestTransmitter_Transmit(t *testing.T) {
 		require.Equal(t, expected, data)
 	})
 	require.NoError(t, tx.Transmit(ctx, "foo", []byte{0x01, 0x02, 0x03}))
+}
+
+func TestTransmitter_TransmitProto(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	w := mock_lcm.NewMockUDPWriter(ctrl)
+	tx := NewTransmitter(w)
+	deadline := time.Unix(0, 1)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+	protoMsg := &timestamp.Timestamp{Seconds: 1, Nanos: 2}
+	expected := []byte{
+		0x4c, 0x43, 0x30, 0x32, // short header magic
+		0x00, 0x00, 0x00, 0x00, // sequence number
+		'f', 'o', 'o', 0x00, // channel
+		0x08, 0x01, 0x10, 0x02, // protobuf message payload
+	}
+	w.EXPECT().SetWriteDeadline(deadline)
+	w.EXPECT().Write(gomock.Any()).Do(func(data []byte) {
+		require.Equal(t, expected, data)
+	})
+	require.NoError(t, tx.TransmitProto(ctx, "foo", protoMsg))
 }
 
 func TestTransmitter_Transmit_WriteError(t *testing.T) {
