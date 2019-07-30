@@ -33,10 +33,7 @@ func NewReceiver(reader UDPReader) *Receiver {
 //
 // If the provided context has a deadline, it will be propagated to the underlying read operation.
 func (r *Receiver) Receive(ctx context.Context) error {
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		deadline = time.Time{}
-	}
+	deadline, _ := ctx.Deadline()
 	if err := r.r.SetReadDeadline(deadline); err != nil {
 		return xerrors.Errorf("receive: %w", err)
 	}
