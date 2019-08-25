@@ -32,8 +32,8 @@ const (
 	lengthOfLongestChannel  = 63 // 64 including null byte
 )
 
-// headerMagic is the uint32 magic number signifying a short LCM message.
-const headerMagic = 0x4c433032
+// shortMessageMagic is the uint32 magic number signifying a short LCM message.
+const shortMessageMagic = 0x4c433032
 
 // Message represents an LCM message.
 type Message struct {
@@ -51,7 +51,7 @@ func (m *Message) marshal(b []byte) (int, error) {
 	if payloadSize > lengthOfLargestPayload {
 		return 0, xerrors.Errorf("channel and data too long: %v bytes", payloadSize)
 	}
-	binary.BigEndian.PutUint32(b[indexOfHeaderMagic:], headerMagic)
+	binary.BigEndian.PutUint32(b[indexOfHeaderMagic:], shortMessageMagic)
 	binary.BigEndian.PutUint32(b[indexOfSequenceNumber:], m.SequenceNumber)
 	copy(b[indexOfChannel:], m.Channel)
 	b[indexOfChannel+len(m.Channel)] = 0
@@ -65,7 +65,7 @@ func (m *Message) unmarshal(data []byte) error {
 		return xerrors.Errorf("insufficient data: %v bytes", len(data))
 	}
 	header := binary.BigEndian.Uint32(data[indexOfHeaderMagic:])
-	if header != headerMagic {
+	if header != shortMessageMagic {
 		return xerrors.Errorf("wrong header magic: 0x%x", header)
 	}
 	sequence := binary.BigEndian.Uint32(data[indexOfSequenceNumber:])

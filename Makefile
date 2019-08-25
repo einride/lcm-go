@@ -33,18 +33,10 @@ go-mod-tidy:
 
 # go-lint: lint Go code
 .PHONY: go-lint
-go-lint: $(GOLANGCI_LINT) go-mocks
+go-lint: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run --enable-all
 
 # go-test: run Go test suite
 .PHONY: go-test
-go-test: go-mocks
+go-test:
 	go test -race -cover ./...
-
-# go-mocks: generate Go mocks
-.PHONY: go-mocks
-go-mocks: test/mocks/lcm.go
-
-test/mocks/lcm.go: receiver.go transmitter.go $(GOBIN)
-	$(GOBIN) -m -run github.com/golang/mock/mockgen -destination $@ \
-		github.com/einride/lcm-go UDPReader,UDPWriter
