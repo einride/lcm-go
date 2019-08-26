@@ -22,7 +22,7 @@ func TestLCM_OneTransmitter_OneReceiver(t *testing.T) {
 	rx, err := ListenMulticastUDP(
 		ctx,
 		WithReceiveInterface(ifi.Name),
-		WithPort(freePort),
+		WithReceivePort(freePort),
 		WithReceiveAddress(ip),
 	)
 	require.NoError(t, err)
@@ -31,7 +31,7 @@ func TestLCM_OneTransmitter_OneReceiver(t *testing.T) {
 	}()
 	tx, err := DialMulticastUDP(
 		ctx,
-		WithTransmitterInterface(ifi.Name),
+		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip, Port: freePort}),
 	)
 	require.NoError(t, err)
@@ -80,7 +80,7 @@ func TestLCM_OneTransmitter_MultipleReceivers(t *testing.T) {
 	rx1, err := ListenMulticastUDP(
 		ctx,
 		WithReceiveInterface(ifi.Name),
-		WithPort(freePort),
+		WithReceivePort(freePort),
 		WithReceiveAddress(ip1),
 	)
 	require.NoError(t, err)
@@ -90,7 +90,7 @@ func TestLCM_OneTransmitter_MultipleReceivers(t *testing.T) {
 	rx2, err := ListenMulticastUDP(
 		ctx,
 		WithReceiveInterface(ifi.Name),
-		WithPort(freePort),
+		WithReceivePort(freePort),
 		WithReceiveAddress(ip2),
 	)
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestLCM_OneTransmitter_MultipleReceivers(t *testing.T) {
 	}()
 	tx, err := DialMulticastUDP(
 		ctx,
-		WithTransmitterInterface(ifi.Name),
+		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip1, Port: freePort}),
 		WithTransmitAddress(&net.UDPAddr{IP: ip2, Port: freePort}),
 	)
@@ -140,7 +140,7 @@ func TestLCM_OneReceiver_MultipleTransmitters(t *testing.T) {
 	rx, err := ListenMulticastUDP(
 		ctx,
 		WithReceiveInterface(ifi.Name),
-		WithPort(freePort),
+		WithReceivePort(freePort),
 		WithReceiveAddress(ip1),
 		WithReceiveAddress(ip2),
 	)
@@ -150,7 +150,7 @@ func TestLCM_OneReceiver_MultipleTransmitters(t *testing.T) {
 	}()
 	tx1, err := DialMulticastUDP(
 		ctx,
-		WithTransmitterInterface(ifi.Name),
+		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip1, Port: freePort}),
 	)
 	require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestLCM_OneReceiver_MultipleTransmitters(t *testing.T) {
 	}()
 	tx2, err := DialMulticastUDP(
 		ctx,
-		WithTransmitterInterface(ifi.Name),
+		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip2, Port: freePort}),
 	)
 	require.NoError(t, err)

@@ -37,8 +37,8 @@ func defaultReceiverOptions() *receiverOptions {
 // ReceiverOption configures an LCM receiver.
 type ReceiverOption func(*receiverOptions)
 
-// WithPort configures the port to listen on.
-func WithPort(port int) ReceiverOption {
+// WithReceivePort configures the port to listen on.
+func WithReceivePort(port int) ReceiverOption {
 	return func(o *receiverOptions) {
 		o.port = port
 	}
@@ -60,24 +60,24 @@ func WithReceiveAddress(ip net.IP) ReceiverOption {
 	}
 }
 
-// WithBPF configures the Berkely Packet Filter to set on the receiver socket.
+// WithReceiveBPF configures the Berkely Packet Filter to set on the receiver socket.
 //
 // Ineffectual in non-Linux environments.
-func WithBPF(program []bpf.Instruction) ReceiverOption {
+func WithReceiveBPF(program []bpf.Instruction) ReceiverOption {
 	return func(o *receiverOptions) {
 		o.bpfProgram = program
 	}
 }
 
-// WithReadBufferSize configures the kernel read buffer size (in bytes).
-func WithReadBufferSize(n int) ReceiverOption {
+// WithReceiveBufferSize configures the kernel read buffer size (in bytes).
+func WithReceiveBufferSize(n int) ReceiverOption {
 	return func(o *receiverOptions) {
 		o.bufferSizeBytes = n
 	}
 }
 
-// WithReadBatchSize configures the max number of messages to receive from the kernel in a single batch.
-func WithReadBatchSize(n int) ReceiverOption {
+// WithReceiveBatchSize configures the max number of messages to receive from the kernel in a single batch.
+func WithReceiveBatchSize(n int) ReceiverOption {
 	return func(o *receiverOptions) {
 		o.batchSize = n
 	}
