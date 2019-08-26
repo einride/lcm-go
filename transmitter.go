@@ -90,6 +90,14 @@ func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte)
 	if err := t.conn.SetWriteDeadline(deadline); err != nil {
 		return xerrors.Errorf("transmit to LCM: %w", err)
 	}
+	// fast-path: transmit to single address
+	if len(t.messageBuf) == 1 {
+		if _, err := t.conn.WriteTo(t.messageBuf[0].Buffers[0], nil, t.messageBuf[0].Addr); err != nil {
+			return xerrors.Errorf("transmit to LCM: %w", err)
+		}
+		return nil
+	}
+	// transmit to multiple addresses
 	var transmitCount int
 	for transmitCount < len(t.messageBuf) {
 		n, err := t.conn.WriteBatch(t.messageBuf[transmitCount:], 0)
