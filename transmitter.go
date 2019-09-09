@@ -61,11 +61,16 @@ func DialMulticastUDP(ctx context.Context, transmitterOpts ...TransmitterOption)
 	return tx, nil
 }
 
+// TransmitProto transmits a protobuf message on the channel given by the message's fully-qualified name.
+func (t *Transmitter) TransmitProto(ctx context.Context, m proto.Message) error {
+	return t.TransmitProtoOnChannel(ctx, proto.MessageName(m), m)
+}
+
 // TransmitProto transmits a protobuf message.
-func (t *Transmitter) TransmitProto(ctx context.Context, channel string, m proto.Message) error {
+func (t *Transmitter) TransmitProtoOnChannel(ctx context.Context, channel string, m proto.Message) error {
 	t.protoBuf.Reset()
 	if err := t.protoBuf.Marshal(m); err != nil {
-		return xerrors.Errorf("transmit proto: %w", err)
+		return xerrors.Errorf("transmit proto on channel %s: %w", channel, err)
 	}
 	return t.Transmit(ctx, channel, t.protoBuf.Bytes())
 }
