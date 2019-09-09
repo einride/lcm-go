@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"reflect"
 	"runtime"
 
+	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/bpf"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/xerrors"
@@ -31,7 +33,7 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 	if len(opts.ips) == 0 {
 		opts.ips = append(opts.ips, DefaultMulticastIP())
 	}
-	rx := &Receiver{conn: conn, opts: opts}
+	rx := &Receiver{conn: conn, opts: opts, protoMessages: make(map[string]proto.Message)}
 	if opts.interfaceName != "" {
 		ifi, err := net.InterfaceByName(opts.interfaceName)
 		if err != nil {
@@ -96,12 +98,15 @@ type Receiver struct {
 	dstAddr         net.IP
 	srcAddr         net.IP
 	ifIndex         int
+	protoMessages   map[string]proto.Message
+	protoMessage    proto.Message
 }
 
 // Receive an LCM message.
 //
 // If the provided context has a deadline, it will be propagated to the underlying read operation.
 func (r *Receiver) Receive(ctx context.Context) error {
+	r.protoMessage = nil
 	if r.messageBufIndex >= r.messageBufSize {
 		r.messageBufIndex = 0
 		deadline, _ := ctx.Deadline()
@@ -127,6 +132,32 @@ func (r *Receiver) Receive(ctx context.Context) error {
 		return xerrors.Errorf("receive on LCM: %w", err)
 	}
 	return nil
+}
+
+// Receive a proto LCM message. The channel is assumed to be a fully-qualified message name.
+func (r *Receiver) ReceiveProto(ctx context.Context) error {
+	if err := r.Receive(ctx); err != nil {
+		return err
+	}
+	protoMessage, ok := r.protoMessages[r.currMessage.Channel]
+	if !ok {
+		messageType := proto.MessageType(r.currMessage.Channel)
+		if messageType == nil {
+			return nil // don't error on encountering non-proto channels
+		}
+		protoMessage = reflect.New(messageType.Elem()).Interface().(proto.Message)
+		r.protoMessages[r.currMessage.Channel] = protoMessage
+	}
+	if err := proto.Unmarshal(r.currMessage.Data, protoMessage); err != nil {
+		return xerrors.Errorf("receive proto %s on LCM: %w", r.currMessage.Channel, err)
+	}
+	r.protoMessage = protoMessage
+	return nil
+}
+
+// ProtoMessage returns the last received proto message.
+func (r *Receiver) ProtoMessage() proto.Message {
+	return r.protoMessage
 }
 
 // Message returns the last received message.

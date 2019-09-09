@@ -1,6 +1,9 @@
 package lcm
 
-import "golang.org/x/net/bpf"
+import (
+	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/bpf"
+)
 
 // indexOfUDPPayload is the first byte index of the payload in a a UDP packet.
 const indexOfUDPPayload = 8
@@ -47,4 +50,13 @@ func ShortMessageChannelFilter(channels ...string) []bpf.Instruction {
 	// no channel match, reject package
 	program = append(program, bpf.RetConstant{Val: 0})
 	return program
+}
+
+// ShortProtoMessageFilter accepts LCM short messages where the channel equals any of the proto message names.
+func ShortProtoMessageFilter(msgs ...proto.Message) []bpf.Instruction {
+	channels := make([]string, 0, len(msgs))
+	for _, msg := range msgs {
+		channels = append(channels, proto.MessageName(msg))
+	}
+	return ShortMessageChannelFilter(channels...)
 }

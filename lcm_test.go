@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/ptypes/duration"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/nettest"
 	"golang.org/x/sync/errgroup"
@@ -193,6 +195,67 @@ func TestLCM_OneReceiver_MultipleTransmitters(t *testing.T) {
 		require.Equal(t, "2", rx.Message().Channel)
 		require.Equal(t, []byte("data2"), rx.Message().Data)
 		require.Equal(t, uint32(0), rx.Message().SequenceNumber)
+	})
+}
+
+func TestLCM_ProtoTransmitter_ProtoReceiver(t *testing.T) {
+	// setup
+	const testTimeout = 1 * time.Second
+	ip := net.IPv4(239, 0, 0, 1)
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+	freePort := getFreePort(t)
+	ifi := getInterface(t)
+	rx, err := ListenMulticastUDP(
+		ctx,
+		WithReceiveInterface(ifi.Name),
+		WithReceivePort(freePort),
+		WithReceiveAddress(ip),
+		WithReceiveBPF(
+			ShortProtoMessageFilter(
+				&timestamp.Timestamp{},
+				&duration.Duration{},
+			),
+		),
+	)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, rx.Close())
+	}()
+	tx, err := DialMulticastUDP(
+		ctx,
+		WithTransmitInterface(ifi.Name),
+		WithTransmitAddress(&net.UDPAddr{IP: ip, Port: freePort}),
+	)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, tx.Close())
+	}()
+	t.Run("receive first", func(t *testing.T) {
+		// when the receiver receives
+		var g errgroup.Group
+		g.Go(func() error {
+			return rx.ReceiveProto(ctx)
+		})
+		// and the transmitter transmits
+		require.NoError(t, tx.TransmitProto(ctx, &timestamp.Timestamp{Seconds: 1, Nanos: 2}))
+		// then the receiver should receive the transmitted message
+		require.NoError(t, g.Wait())
+		require.Equal(t, "google.protobuf.Timestamp", rx.Message().Channel)
+		require.Equal(t, &timestamp.Timestamp{Seconds: 1, Nanos: 2}, rx.ProtoMessage())
+	})
+	t.Run("receive second", func(t *testing.T) {
+		// when the receiver receives
+		var g errgroup.Group
+		g.Go(func() error {
+			return rx.ReceiveProto(ctx)
+		})
+		// and the transmitter transmits
+		require.NoError(t, tx.TransmitProto(ctx, &duration.Duration{Seconds: 1, Nanos: 2}))
+		// then the receiver should receive the transmitted message
+		require.NoError(t, g.Wait())
+		require.Equal(t, "google.protobuf.Duration", rx.Message().Channel)
+		require.Equal(t, &duration.Duration{Seconds: 1, Nanos: 2}, rx.ProtoMessage())
 	})
 }
 
