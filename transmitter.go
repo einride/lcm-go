@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/ipv4"
+	"golang.org/x/net/nettest"
 	"golang.org/x/xerrors"
 )
 
@@ -36,14 +37,20 @@ func DialMulticastUDP(ctx context.Context, transmitterOpts ...TransmitterOption)
 	if err := conn.SetMulticastTTL(opts.ttl); err != nil {
 		return nil, xerrors.Errorf("dial multicast UDP: %w", err)
 	}
+	var ifi *net.Interface
 	if opts.interfaceName != "" {
-		ifi, err := net.InterfaceByName(opts.interfaceName)
+		ifi, err = net.InterfaceByName(opts.interfaceName)
 		if err != nil {
-			return nil, xerrors.Errorf("dial multicast UDP: %w", err)
+			return nil, xerrors.Errorf("dial multicast UDP: failed to lookup provided if: %w", err)
 		}
-		if err := conn.SetMulticastInterface(ifi); err != nil {
-			return nil, xerrors.Errorf("dial multicast UDP: %w", err)
+	} else {
+		ifi, err = getMulticastInterface()
+		if err != nil {
+			return nil, xerrors.Errorf("dial multicast UDP: failed to lookup multicast if: %w", err)
 		}
+	}
+	if err := conn.SetMulticastInterface(ifi); err != nil {
+		return nil, xerrors.Errorf("dial multicast UDP: %w", err)
 	}
 	if err := conn.SetMulticastLoopback(opts.loopback); err != nil {
 		return nil, xerrors.Errorf("dial multicast UDP: %w", err)
@@ -59,6 +66,15 @@ func DialMulticastUDP(ctx context.Context, transmitterOpts ...TransmitterOption)
 		})
 	}
 	return tx, nil
+}
+
+// getMulticastInterface retrieves a multicast enabled interface to transmit on.
+func getMulticastInterface() (*net.Interface, error) {
+	ifi, err := nettest.RoutedInterface("ip4", net.FlagUp|net.FlagMulticast|net.FlagLoopback)
+	if err == nil {
+		return ifi, nil
+	}
+	return nettest.RoutedInterface("ip4", net.FlagUp|net.FlagMulticast)
 }
 
 // TransmitProto transmits a protobuf message on the channel given by the message's fully-qualified name.
