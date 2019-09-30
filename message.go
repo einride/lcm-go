@@ -3,6 +3,7 @@ package lcm
 import (
 	"bytes"
 	"encoding/binary"
+	"strings"
 
 	"golang.org/x/xerrors"
 )
@@ -38,25 +39,42 @@ const shortMessageMagic = 0x4c433032
 // Message represents an LCM message.
 type Message struct {
 	Channel        string
+	Params         string
 	SequenceNumber uint32
 	Data           []byte
 }
 
 // marshal an LCM message.
 func (m *Message) marshal(b []byte) (int, error) {
-	if len(m.Channel) > lengthOfLongestChannel {
+	var rawChannel string
+	if m.Params != "" {
+		rawChannel = m.Channel + "?" + m.Params
+	} else {
+		rawChannel = m.Channel
+	}
+
+	cLen := len(rawChannel)
+	if cLen > lengthOfLongestChannel {
 		return 0, xerrors.Errorf("channel too long: %v bytes", len(m.Channel))
 	}
-	payloadSize := len(m.Channel) + 1 + len(m.Data)
+	payloadSize := cLen + 1 + len(m.Data)
 	if payloadSize > lengthOfLargestPayload {
 		return 0, xerrors.Errorf("channel and data too long: %v bytes", payloadSize)
 	}
 	binary.BigEndian.PutUint32(b[indexOfHeaderMagic:], shortMessageMagic)
 	binary.BigEndian.PutUint32(b[indexOfSequenceNumber:], m.SequenceNumber)
-	copy(b[indexOfChannel:], m.Channel)
-	b[indexOfChannel+len(m.Channel)] = 0
-	copy(b[indexOfChannel+len(m.Channel)+1:], m.Data)
+	copy(b[indexOfChannel:], rawChannel)
+	b[indexOfChannel+cLen] = 0
+	copy(b[indexOfChannel+cLen+1:], m.Data)
 	return lengthOfHeaderMagic + lengthOfSequenceNumber + payloadSize, nil
+}
+
+func split(s string, c string) (string, string) {
+	i := strings.Index(s, c)
+	if i < 0 {
+		return s, ""
+	}
+	return s[:i], s[i+len(c):]
 }
 
 // unmarshal an LCM message.
@@ -74,7 +92,10 @@ func (m *Message) unmarshal(data []byte) error {
 		return xerrors.New("invalid channel: not null-terminated")
 	}
 	indexOfPayload := indexOfChannel + offsetOfNullByte + 1
-	m.Channel = string(data[indexOfChannel : indexOfPayload-1])
+	channel, params := split(string(data[indexOfChannel:indexOfPayload-1]), "?")
+
+	m.Channel = channel
+	m.Params = params
 	m.SequenceNumber = sequence
 	m.Data = data[indexOfPayload:]
 	return nil
