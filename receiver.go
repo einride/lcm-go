@@ -6,12 +6,18 @@ import (
 	"net"
 	"reflect"
 	"runtime"
+	"strings"
 
+	"github.com/einride/lcm-go/pkg/lz4"
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/bpf"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/xerrors"
 )
+
+type Decompressor interface {
+	Decompress(data []byte) ([]byte, error)
+}
 
 // ListenMulticastUDP returns a Receiver configured with the provided options.
 func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*Receiver, error) {
@@ -33,7 +39,12 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 	if len(opts.ips) == 0 {
 		opts.ips = append(opts.ips, DefaultMulticastIP())
 	}
-	rx := &Receiver{conn: conn, opts: opts, protoMessages: make(map[string]proto.Message)}
+	rx := &Receiver{
+		conn:          conn,
+		opts:          opts,
+		protoMessages: make(map[string]proto.Message),
+		decompressors: map[string]Decompressor{"z=lz4": lz4.NewDecompressor()},
+	}
 	if opts.interfaceName != "" {
 		ifi, err := net.InterfaceByName(opts.interfaceName)
 		if err != nil {
@@ -100,6 +111,7 @@ type Receiver struct {
 	ifIndex         int
 	protoMessages   map[string]proto.Message
 	protoMessage    proto.Message
+	decompressors   map[string]Decompressor
 }
 
 // Receive an LCM message.
@@ -130,6 +142,17 @@ func (r *Receiver) Receive(ctx context.Context) error {
 	r.ifIndex = cm.IfIndex
 	if err := r.currMessage.unmarshal(curr.Buffers[0][:curr.N]); err != nil {
 		return xerrors.Errorf("receive on LCM: %w", err)
+	}
+	params := strings.Split(r.currMessage.Params, "&")
+	if len(params) > 1 {
+		return xerrors.Errorf("receive multiple query params not supported")
+	}
+	if decompressor := r.decompressors[params[0]]; decompressor != nil {
+		data, err := decompressor.Decompress(r.currMessage.Data)
+		if err != nil {
+			return xerrors.Errorf("decompressor on LCM: %w", err)
+		}
+		r.currMessage.Data = data
 	}
 	return nil
 }

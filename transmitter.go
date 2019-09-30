@@ -21,6 +21,11 @@ type Transmitter struct {
 	msg            Message
 }
 
+type Compressor interface {
+	Compress(data []byte) ([]byte, error)
+	Name() string
+}
+
 // DialMulticastUDP returns a Transmitter configured with the provided options.
 func DialMulticastUDP(ctx context.Context, transmitterOpts ...TransmitterOption) (*Transmitter, error) {
 	opts := defaultTransmitterOptions()
@@ -95,7 +100,18 @@ func (t *Transmitter) TransmitProtoOnChannel(ctx context.Context, channel string
 //
 // If the provided context has a deadline, it will be propagated to the underlying write operation.
 func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte) error {
-	t.msg.Data = data
+	if compressor := t.opts.compressor[channel]; compressor != nil {
+		compressed, err := compressor.Compress(data)
+		if err != nil {
+			return xerrors.Errorf("transmit compress: %w", err)
+		}
+		t.msg.Data = compressed
+		t.msg.Params = "z=" + compressor.Name()
+	} else {
+		t.msg.Data = data
+		t.msg.Params = ""
+	}
+
 	t.msg.Channel = channel
 	t.msg.SequenceNumber = t.sequenceNumber
 	t.sequenceNumber++

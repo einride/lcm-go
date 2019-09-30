@@ -6,6 +6,7 @@ import "net"
 type transmitterOptions struct {
 	ttl           int
 	loopback      bool
+	compressor    map[string]Compressor
 	interfaceName string
 	addrs         []*net.UDPAddr
 }
@@ -13,8 +14,9 @@ type transmitterOptions struct {
 // defaultTransmitterOptions returns transmitter options with sensible default values.
 func defaultTransmitterOptions() *transmitterOptions {
 	return &transmitterOptions{
-		loopback: true,
-		ttl:      1,
+		loopback:   true,
+		ttl:        1,
+		compressor: make(map[string]Compressor),
 	}
 }
 
@@ -41,6 +43,13 @@ func WithTransmitAddress(addr *net.UDPAddr) TransmitterOption {
 func WithTransmitMulticastLoopback(b bool) TransmitterOption {
 	return func(opts *transmitterOptions) {
 		opts.loopback = b
+	}
+}
+
+// WithTransmitCompression configures compressor on a certain channel
+func WithTransmitCompression(channel string, compressor Compressor) TransmitterOption {
+	return func(opts *transmitterOptions) {
+		opts.compressor[channel] = compressor
 	}
 }
 
