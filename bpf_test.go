@@ -26,6 +26,17 @@ func TestShortMessageChannelFilter(t *testing.T) {
 			expected: 0xffff,
 		},
 		{
+			name:    "accepted query parameters",
+			program: ShortMessageChannelFilter("foo", "barbaz"),
+			packet: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // UDP header
+				0x4c, 0x43, 0x30, 0x32, // magic
+				0x00, 0x00, 0x00, 0x01, // sequence number
+				'b', 'a', 'r', 'b', 'a', 'z', '?', 'm', '=', '1', 0, // channel
+			},
+			expected: 0xffff,
+		},
+		{
 			name:    "accepted 2",
 			program: ShortMessageChannelFilter("foo", "barbaz"),
 			packet: []byte{

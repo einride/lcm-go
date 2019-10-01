@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/einride/lcm-go/pkg/lz4"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
@@ -276,6 +277,7 @@ func TestLCM_ProtoTransmitter_ProtoReceiver(t *testing.T) {
 		ctx,
 		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip, Port: freePort}),
+		WithTransmitCompression(proto.MessageName(&timestamp.Timestamp{}), lz4.NewCompressor()),
 	)
 	require.NoError(t, err)
 	defer func() {
