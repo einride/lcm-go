@@ -6,7 +6,10 @@ import (
 )
 
 // indexOfUDPPayload is the first byte index of the payload in a a UDP packet.
-const indexOfUDPPayload = 8
+const (
+	indexOfUDPPayload          = 8
+	jumpNextChannelPlaceholder = 254
+)
 
 // ShortMessageFilter accepts only LCM short messages.
 func ShortMessageFilter() []bpf.Instruction {
@@ -33,11 +36,9 @@ func ShortMessageChannelFilter(channels ...string) []bpf.Instruction {
 		for i := 0; i < len(channel); i++ {
 			// check if the i:th byte matches, skip to next channel if not
 			currByteIndex := indexOfUDPPayload + indexOfChannel + uint32(i)
-			// 2 remaining instructions per byte plus the return for accepting
-			remainingInstructions := (uint8(len(channel))-uint8(i))*2 + 1 + 1 // accept-instr + extra '?'-test
 			program = append(program,
 				bpf.LoadAbsolute{Off: currByteIndex, Size: 1},
-				bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: uint32(channel[i]), SkipTrue: remainingInstructions},
+				bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: uint32(channel[i]), SkipTrue: jumpNextChannelPlaceholder},
 			)
 		}
 		byteIndex := indexOfUDPPayload + indexOfChannel + uint32(len(channel))
@@ -52,6 +53,24 @@ func ShortMessageChannelFilter(channels ...string) []bpf.Instruction {
 	}
 	// no channel match, reject package
 	program = append(program, bpf.RetConstant{Val: 0})
+	// fill in the missing instruction
+	nextChannelPos := uint8(len(program)) - 1
+	for i := uint8(len(program)) - 1; i >= 3; i-- {
+		switch instr := program[i].(type) {
+		case bpf.JumpIf:
+			if instr.SkipTrue != jumpNextChannelPlaceholder {
+				continue
+			}
+			instr.SkipTrue = nextChannelPos - i - 1 // remove one, since the skip is "off by one"
+			program[i] = instr
+		case bpf.LoadAbsolute:
+			// Each channel starts with a load of the first byte in channel
+			if instr.Off != indexOfUDPPayload+indexOfChannel {
+				continue
+			}
+			nextChannelPos = i
+		}
+	}
 	return program
 }
 
