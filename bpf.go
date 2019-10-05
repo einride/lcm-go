@@ -30,27 +30,25 @@ func ShortMessageChannelFilter(channels ...string) []bpf.Instruction {
 	)
 	// check for each channel, accept if any matches
 	for _, channel := range channels {
-		for i := 0; i < len(channel)+1; /* null byte or '?' */ i++ {
+		for i := 0; i < len(channel); i++ {
 			// check if the i:th byte matches, skip to next channel if not
 			currByteIndex := indexOfUDPPayload + indexOfChannel + uint32(i)
 			// 2 remaining instructions per byte plus the return for accepting
 			remainingInstructions := (uint8(len(channel))-uint8(i))*2 + 1 + 1 // accept-instr + extra '?'-test
-			if i < len(channel) {
-				program = append(program,
-					bpf.LoadAbsolute{Off: currByteIndex, Size: 1},
-					bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: uint32(channel[i]), SkipTrue: remainingInstructions},
-				)
-				continue
-			}
 			program = append(program,
 				bpf.LoadAbsolute{Off: currByteIndex, Size: 1},
-				// If there is a query parameter accept the message as is
-				bpf.JumpIf{Cond: bpf.JumpEqual, Val: '?', SkipTrue: 1},
-				bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: 0, SkipTrue: 1},
+				bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: uint32(channel[i]), SkipTrue: remainingInstructions},
 			)
 		}
-		// channel match, accept package
-		program = append(program, bpf.RetConstant{Val: lengthOfLargestUDPMessage})
+		byteIndex := indexOfUDPPayload + indexOfChannel + uint32(len(channel))
+		program = append(program,
+			bpf.LoadAbsolute{Off: byteIndex, Size: 1},
+			// If there is a query parameter accept the message as is
+			bpf.JumpIf{Cond: bpf.JumpEqual, Val: '?', SkipTrue: 1},
+			bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: 0, SkipTrue: 1},
+			// channel match, accept package
+			bpf.RetConstant{Val: lengthOfLargestUDPMessage},
+		)
 	}
 	// no channel match, reject package
 	program = append(program, bpf.RetConstant{Val: 0})
