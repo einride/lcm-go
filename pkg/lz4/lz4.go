@@ -20,10 +20,13 @@ type Decompressor struct {
 }
 
 func NewCompressor() *Compressor {
-	return &Compressor{
+	comp := &Compressor{
 		buffer: bytes.NewBuffer(nil),
 		writer: lz4.NewWriter(nil),
 	}
+	comp.writer.Header.BlockMaxSize = 64 << 10
+	comp.writer.Header.BlockChecksum = true
+	return comp
 }
 
 func (c *Compressor) Compress(data []byte) ([]byte, error) {
