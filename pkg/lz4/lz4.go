@@ -36,8 +36,8 @@ func (c *Compressor) Compress(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, xerrors.Errorf("lz4 compress write: %w", err)
 	}
-	if err = c.writer.Flush(); err != nil {
-		return nil, xerrors.Errorf("lz4 compress flush: %w", err)
+	if err = c.writer.Close(); err != nil {
+		return nil, xerrors.Errorf("lz4 compress close: %w", err)
 	}
 	return c.buffer.Bytes(), nil
 }
