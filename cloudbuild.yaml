@@ -1,13 +1,15 @@
 steps:
-  - name: "gcr.io/einride-infrastructure/gcb-setup"
+  - name: gcr.io/einride/cloud-builder
+    entrypoint: "/gcb-setup/run.sh"
     volumes:
-      - name: 'ssh'
+      - name: ssh
         path: /root/.ssh
     env:
-      - 'BRANCH_NAME=$BRANCH_NAME'
-      - 'REPO_NAME=$REPO_NAME'
-  - name: gcr.io/einride-infrastructure/go-gcb:1.13
-    entrypoint: "make"
+      - BRANCH_NAME=$BRANCH_NAME
+      - REPO_NAME=$REPO_NAME
+
+  - name: gcr.io/einride/cloud-builder
+    entrypoint: make
     volumes:
-      - name: "ssh"
+      - name: ssh
         path: /root/.ssh
