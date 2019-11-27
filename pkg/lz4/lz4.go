@@ -32,11 +32,10 @@ func NewCompressor() *Compressor {
 func (c *Compressor) Compress(data []byte) ([]byte, error) {
 	c.buffer.Reset()
 	c.writer.Reset(c.buffer)
-	_, err := c.writer.Write(data)
-	if err != nil {
+	if _, err := c.writer.Write(data); err != nil {
 		return nil, xerrors.Errorf("lz4 compress write: %w", err)
 	}
-	if err = c.writer.Close(); err != nil {
+	if err := c.writer.Close(); err != nil {
 		return nil, xerrors.Errorf("lz4 compress close: %w", err)
 	}
 	return c.buffer.Bytes(), nil
