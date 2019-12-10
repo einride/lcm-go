@@ -37,7 +37,7 @@ go-mod-tidy:
 # godox: we keep todos in the history
 .PHONY: go-lint
 go-lint: $(GOLANGCI_LINT)
-	$(GOLANGCI_LINT) run --enable-all --disable funlen,godox
+	$(GOLANGCI_LINT) run --enable-all --disable funlen,godox,wsl
 
 # go-test: run Go test suite
 .PHONY: go-test
