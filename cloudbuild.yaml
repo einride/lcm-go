@@ -7,7 +7,6 @@ steps:
     env:
       - BRANCH_NAME=$BRANCH_NAME
       - REPO_NAME=$REPO_NAME
-
   - name: gcr.io/einride/cloud-builder
     entrypoint: make
     volumes:

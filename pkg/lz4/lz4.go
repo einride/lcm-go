@@ -25,7 +25,6 @@ func NewCompressor() *Compressor {
 		writer: lz4.NewWriter(nil),
 	}
 	comp.writer.Header.BlockMaxSize = 64 << 10
-	comp.writer.Header.BlockChecksum = true
 	return comp
 }
 
