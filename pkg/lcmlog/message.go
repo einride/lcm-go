@@ -3,6 +3,8 @@ package lcmlog
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
+	"io"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -90,6 +92,21 @@ func (m *Message) unmarshalBinary(b []byte) {
 	m.Data = b[indexOfData:endOfData]
 }
 
+func (m *Message) marshalBinary() []byte {
+	endofChannel := endOfDataLength + uint32(len(m.Channel))
+	endOfData := endofChannel + uint32(len(m.Data))
+	b := make([]byte, endOfDataLength+len(m.Channel)+len(m.Data))
+	binary.BigEndian.PutUint32(b[indexOfSyncWord:endOfSyncWord], syncWord)
+	binary.BigEndian.PutUint64(b[indexOfEventNumber:endOfEventNumber], m.EventNumber)
+	timestampMicros := uint64(time.Duration(m.Timestamp.UnixNano()) / time.Microsecond)
+	binary.BigEndian.PutUint64(b[indexOfTimestamp:endOfTimestamp], timestampMicros)
+	binary.BigEndian.PutUint32(b[indexOfChannelLength:endOfChannelLength], uint32(len(m.Channel)))
+	binary.BigEndian.PutUint32(b[indexOfDataLength:endOfDataLength], uint32(len(m.Data)))
+	copy(b[endOfDataLength:endofChannel], m.Channel)
+	copy(b[endofChannel:endOfData], m.Data)
+	return b
+}
+
 func scanLogMessages(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if len(data) == 0 {
 		return 0, nil, nil
@@ -114,4 +131,12 @@ func scanLogMessages(data []byte, atEOF bool) (advance int, token []byte, err er
 		return 0, nil, nil
 	}
 	return messageLength, data[:messageLength], nil
+}
+
+func (m *Message) WriteTo(w io.Writer) (int64, error) {
+	n, err := w.Write(m.marshalBinary())
+	if err != nil {
+		return 0, fmt.Errorf("new log file: %w", err)
+	}
+	return int64(n), err
 }
