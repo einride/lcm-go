@@ -3,17 +3,28 @@ package lcmlog
 import (
 	"bufio"
 	"io"
+	"strings"
+
+	"github.com/einride/lcm-go/pkg/lz4"
 )
 
+type Decompressor interface {
+	Decompress(data []byte) ([]byte, error)
+}
+
 type Scanner struct {
-	sc  *bufio.Scanner
-	msg Message
+	sc            *bufio.Scanner
+	msg           Message
+	decompressors map[string]Decompressor
 }
 
 func NewScanner(r io.Reader) *Scanner {
 	sc := bufio.NewScanner(r)
 	sc.Split(scanLogMessages)
-	return &Scanner{sc: sc}
+	return &Scanner{
+		sc:            sc,
+		decompressors: map[string]Decompressor{"z=lz4": lz4.NewDecompressor()},
+	}
 }
 
 func (s *Scanner) Scan() bool {
@@ -21,6 +32,15 @@ func (s *Scanner) Scan() bool {
 		return false
 	}
 	s.msg.unmarshalBinary(s.sc.Bytes())
+	params := strings.Split(s.msg.Params, "&")
+	if decompressor := s.decompressors[params[0]]; decompressor != nil {
+		data, err := decompressor.Decompress(s.msg.Data)
+		if err != nil {
+			return false
+		}
+		s.msg.Data = data
+	}
+
 	return true
 }
 
