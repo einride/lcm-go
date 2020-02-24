@@ -3,6 +3,7 @@ package lcmlog
 import (
 	"io"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,7 +23,7 @@ func TestScanner_Scan_Testdata(t *testing.T) {
 	sc := NewScanner(f)
 	var i int32
 	for sc.Scan() {
-		require.Equal(t, []byte("test"), sc.Message().Channel)
+		require.Equal(t, "test", sc.Message().Channel)
 		require.Equal(t, uint64(i), sc.Message().EventNumber)
 		ts := &timestamp.Timestamp{}
 		require.NoError(t, proto.Unmarshal(sc.Message().Data, ts))
@@ -32,7 +33,7 @@ func TestScanner_Scan_Testdata(t *testing.T) {
 }
 
 func TestMarshalling(t *testing.T) {
-	m := Message{EventNumber: 1, Timestamp: time.Unix(300, 10e6), Channel: []byte("test"), Data: []byte("test_data")}
+	m := Message{EventNumber: 1, Timestamp: time.Unix(300, 10e6), Channel: "test", Data: []byte("test_data")}
 	var newM Message
 	newM.unmarshalBinary(m.marshalBinary())
 	require.Equal(t, m.Timestamp, newM.Timestamp)
@@ -44,8 +45,8 @@ func TestWriteToFile(t *testing.T) {
 	file, err := os.Create(fileName)
 	require.NoError(t, err)
 	messages := []*Message{
-		{EventNumber: 1, Timestamp: time.Unix(300, 10e6), Channel: []byte("test"), Data: []byte("test_data")},
-		{EventNumber: 8, Timestamp: time.Unix(300, 10e6), Channel: []byte("testt"), Data: []byte("test_data2")},
+		{EventNumber: 1, Timestamp: time.Unix(300, 10e6), Channel: "test", Data: []byte("test_data")},
+		{EventNumber: 8, Timestamp: time.Unix(300, 10e6), Channel: "testt", Data: []byte("test_data2")},
 	}
 	messagesMap := map[uint64]*Message{}
 	for i := range messages {
@@ -113,4 +114,21 @@ func TestWriteToFileFromFile(t *testing.T) {
 	require.Equal(t, messages, newMessages)
 	err = os.Remove(fileName)
 	require.NoError(t, err)
+}
+
+func TestScanner_Scan_Compressed_Testdata(t *testing.T) {
+	f, err := os.Open("testdata/lcmlog_compressed.00")
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, f.Close())
+	}()
+	sc := NewScanner(f)
+	var j int32
+	for i := 100; i < 110; i++ {
+		require.True(t, sc.Scan())
+		require.Equal(t, sc.Message().Data, []byte(strings.Repeat("foo", i)))
+		require.Equal(t, "first", sc.Message().Channel)
+		require.Equal(t, uint64(j), sc.Message().EventNumber)
+		j++
+	}
 }

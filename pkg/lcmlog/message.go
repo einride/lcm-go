@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -75,8 +76,17 @@ const (
 type Message struct {
 	EventNumber uint64
 	Timestamp   time.Time
-	Channel     []byte
+	Channel     string
+	Params      string
 	Data        []byte
+}
+
+func split(s string, c string) (string, string) {
+	i := strings.Index(s, c)
+	if i < 0 {
+		return s, ""
+	}
+	return s[:i], s[i+len(c):]
 }
 
 func (m *Message) unmarshalBinary(b []byte) {
@@ -88,7 +98,9 @@ func (m *Message) unmarshalBinary(b []byte) {
 	endOfChannel := indexOfChannel + channelLength
 	indexOfData := endOfChannel
 	endOfData := indexOfData + dataLength
-	m.Channel = b[indexOfChannel:endOfChannel]
+	channel, params := split(string(b[indexOfChannel:endOfChannel]), "?")
+	m.Channel = channel
+	m.Params = params
 	m.Data = b[indexOfData:endOfData]
 }
 
