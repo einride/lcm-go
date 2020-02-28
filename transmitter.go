@@ -2,12 +2,12 @@ package lcm
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/nettest"
-	"golang.org/x/xerrors"
 )
 
 // Transmitter represents an LCM Transmitter instance.
@@ -35,30 +35,30 @@ func DialMulticastUDP(ctx context.Context, transmitterOpts ...TransmitterOption)
 	var listenConfig net.ListenConfig
 	c, err := listenConfig.ListenPacket(ctx, "udp4", "")
 	if err != nil {
-		return nil, xerrors.Errorf("dial multicast UDP: %w", err)
+		return nil, fmt.Errorf("dial multicast UDP: %w", err)
 	}
 	udpConn := c.(*net.UDPConn)
 	conn := ipv4.NewPacketConn(udpConn)
 	if err := conn.SetMulticastTTL(opts.ttl); err != nil {
-		return nil, xerrors.Errorf("dial multicast UDP: %w", err)
+		return nil, fmt.Errorf("dial multicast UDP: %w", err)
 	}
 	var ifi *net.Interface
 	if opts.interfaceName != "" {
 		ifi, err = net.InterfaceByName(opts.interfaceName)
 		if err != nil {
-			return nil, xerrors.Errorf("dial multicast UDP: failed to lookup provided if: %w", err)
+			return nil, fmt.Errorf("dial multicast UDP: failed to lookup provided if: %w", err)
 		}
 	} else {
 		ifi, err = getMulticastInterface()
 		if err != nil {
-			return nil, xerrors.Errorf("dial multicast UDP: failed to lookup multicast if: %w", err)
+			return nil, fmt.Errorf("dial multicast UDP: failed to lookup multicast if: %w", err)
 		}
 	}
 	if err := conn.SetMulticastInterface(ifi); err != nil {
-		return nil, xerrors.Errorf("dial multicast UDP: %w", err)
+		return nil, fmt.Errorf("dial multicast UDP: %w", err)
 	}
 	if err := conn.SetMulticastLoopback(opts.loopback); err != nil {
-		return nil, xerrors.Errorf("dial multicast UDP: %w", err)
+		return nil, fmt.Errorf("dial multicast UDP: %w", err)
 	}
 	tx := &Transmitter{opts: opts, conn: conn}
 	if len(opts.addrs) == 0 {
@@ -91,7 +91,7 @@ func (t *Transmitter) TransmitProto(ctx context.Context, m proto.Message) error 
 func (t *Transmitter) TransmitProtoOnChannel(ctx context.Context, channel string, m proto.Message) error {
 	t.protoBuf.Reset()
 	if err := t.protoBuf.Marshal(m); err != nil {
-		return xerrors.Errorf("transmit proto on channel %s: %w", channel, err)
+		return fmt.Errorf("transmit proto on channel %s: %w", channel, err)
 	}
 	return t.Transmit(ctx, channel, t.protoBuf.Bytes())
 }
@@ -103,7 +103,7 @@ func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte)
 	if compressor := t.opts.compressor[channel]; compressor != nil {
 		compressed, err := compressor.Compress(data)
 		if err != nil {
-			return xerrors.Errorf("transmit compress: %w", err)
+			return fmt.Errorf("transmit compress: %w", err)
 		}
 		t.msg.Data = compressed
 		t.msg.Params = "z=" + compressor.Name()
@@ -117,7 +117,7 @@ func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte)
 	t.sequenceNumber++
 	n, err := t.msg.marshal(t.payloadBuf[:])
 	if err != nil {
-		return xerrors.Errorf("transmit to LCM: %w", err)
+		return fmt.Errorf("transmit to LCM: %w", err)
 	}
 	for i := range t.messageBuf {
 		t.messageBuf[i].Buffers[0] = t.payloadBuf[:n]
@@ -125,12 +125,12 @@ func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte)
 	}
 	deadline, _ := ctx.Deadline()
 	if err := t.conn.SetWriteDeadline(deadline); err != nil {
-		return xerrors.Errorf("transmit to LCM: %w", err)
+		return fmt.Errorf("transmit to LCM: %w", err)
 	}
 	// fast-path: transmit to single address
 	if len(t.messageBuf) == 1 {
 		if _, err := t.conn.WriteTo(t.messageBuf[0].Buffers[0], nil, t.messageBuf[0].Addr); err != nil {
-			return xerrors.Errorf("transmit to LCM: %w", err)
+			return fmt.Errorf("transmit to LCM: %w", err)
 		}
 		return nil
 	}
@@ -139,7 +139,7 @@ func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte)
 	for transmitCount < len(t.messageBuf) {
 		n, err := t.conn.WriteBatch(t.messageBuf[transmitCount:], 0)
 		if err != nil {
-			return xerrors.Errorf("transmit to LCM: %w", err)
+			return fmt.Errorf("transmit to LCM: %w", err)
 		}
 		transmitCount += n
 	}
@@ -149,7 +149,7 @@ func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte)
 // Close the transmitter connection.
 func (t *Transmitter) Close() error {
 	if err := t.conn.Close(); err != nil {
-		return xerrors.Errorf("close LCM transmitter: %w", err)
+		return fmt.Errorf("close LCM transmitter: %w", err)
 	}
 	return nil
 }
