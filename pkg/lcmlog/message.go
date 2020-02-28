@@ -71,6 +71,22 @@ const (
 	indexOfChannel       = endOfDataLength
 )
 
+type UnexpectedSyncWordError struct {
+	actualSyncWord uint32
+}
+
+func (e *UnexpectedSyncWordError) Error() string {
+	return fmt.Sprintf("unexpected sync word: %#x", e.actualSyncWord)
+}
+
+type PartialMessageEndError struct {
+	data []byte
+}
+
+func (e *PartialMessageEndError) Error() string {
+	return fmt.Sprintf("partial message at end of log file: %s", hex.EncodeToString(e.data))
+}
+
 type Message struct {
 	EventNumber uint64
 	Timestamp   time.Time
@@ -121,13 +137,13 @@ func scanLogMessages(data []byte, atEOF bool) (advance int, token []byte, err er
 	}
 	if len(data) < lengthOfHeader {
 		if atEOF {
-			return 0, nil, fmt.Errorf("partial message at end of log file: %s", hex.EncodeToString(data))
+			return 0, nil, &PartialMessageEndError{data: data}
 		}
 		return 0, nil, nil
 	}
 	actualSyncWord := binary.BigEndian.Uint32(data[indexOfSyncWord:endOfSyncWord])
 	if actualSyncWord != syncWord {
-		return 0, nil, fmt.Errorf("unexpected sync word: %#x", actualSyncWord)
+		return 0, nil, &UnexpectedSyncWordError{actualSyncWord: actualSyncWord}
 	}
 	channelLength := binary.BigEndian.Uint32(data[indexOfChannelLength:endOfChannelLength])
 	dataLength := binary.BigEndian.Uint32(data[indexOfDataLength:endOfDataLength])
