@@ -3,9 +3,9 @@ package lcm
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
+	"fmt"
 	"strings"
-
-	"golang.org/x/xerrors"
 )
 
 // lengthOfLargestUDPMessage is length in bytes of the largest possible UDP message.
@@ -55,11 +55,11 @@ func (m *Message) marshal(b []byte) (int, error) {
 
 	cLen := len(rawChannel)
 	if cLen > lengthOfLongestChannel {
-		return 0, xerrors.Errorf("channel too long: %v bytes", len(m.Channel))
+		return 0, fmt.Errorf("channel too long: %v bytes", len(m.Channel))
 	}
 	payloadSize := cLen + 1 + len(m.Data)
 	if payloadSize > lengthOfLargestPayload {
-		return 0, xerrors.Errorf("channel and data too long: %v bytes", payloadSize)
+		return 0, fmt.Errorf("channel and data too long: %v bytes", payloadSize)
 	}
 	binary.BigEndian.PutUint32(b[indexOfHeaderMagic:], shortMessageMagic)
 	binary.BigEndian.PutUint32(b[indexOfSequenceNumber:], m.SequenceNumber)
@@ -80,16 +80,16 @@ func split(s string, c string) (string, string) {
 // unmarshal an LCM message.
 func (m *Message) unmarshal(data []byte) error {
 	if len(data) < lengthOfSmallestMessage {
-		return xerrors.Errorf("insufficient data: %v bytes", len(data))
+		return fmt.Errorf("insufficient data: %v bytes", len(data))
 	}
 	header := binary.BigEndian.Uint32(data[indexOfHeaderMagic:])
 	if header != shortMessageMagic {
-		return xerrors.Errorf("wrong header magic: 0x%x", header)
+		return fmt.Errorf("wrong header magic: 0x%x", header)
 	}
 	sequence := binary.BigEndian.Uint32(data[indexOfSequenceNumber:])
 	offsetOfNullByte := bytes.IndexByte(data[indexOfChannel:], 0)
 	if offsetOfNullByte == -1 {
-		return xerrors.New("invalid channel: not null-terminated")
+		return errors.New("invalid channel: not null-terminated")
 	}
 	indexOfPayload := indexOfChannel + offsetOfNullByte + 1
 	channel, params := split(string(data[indexOfChannel:indexOfPayload-1]), "?")

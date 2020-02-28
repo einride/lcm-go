@@ -7,8 +7,6 @@ import (
 	"io"
 	"strings"
 	"time"
-
-	"golang.org/x/xerrors"
 )
 
 // from: https://lcm-proj.github.io/log_file_format.html
@@ -125,20 +123,20 @@ func scanLogMessages(data []byte, atEOF bool) (advance int, token []byte, err er
 	}
 	if len(data) < lengthOfHeader {
 		if atEOF {
-			return 0, nil, xerrors.Errorf("partial message at end of log file: %s", hex.EncodeToString(data))
+			return 0, nil, fmt.Errorf("partial message at end of log file: %s", hex.EncodeToString(data))
 		}
 		return 0, nil, nil
 	}
 	actualSyncWord := binary.BigEndian.Uint32(data[indexOfSyncWord:endOfSyncWord])
 	if actualSyncWord != syncWord {
-		return 0, nil, xerrors.Errorf("unexpected sync word: %#x", actualSyncWord)
+		return 0, nil, fmt.Errorf("unexpected sync word: %#x", actualSyncWord)
 	}
 	channelLength := binary.BigEndian.Uint32(data[indexOfChannelLength:endOfChannelLength])
 	dataLength := binary.BigEndian.Uint32(data[indexOfDataLength:endOfDataLength])
 	messageLength := lengthOfHeader + int(channelLength) + int(dataLength)
 	if len(data) < messageLength {
 		if atEOF {
-			return 0, nil, xerrors.Errorf("partial message at end of log file: %s", hex.EncodeToString(data))
+			return 0, nil, fmt.Errorf("partial message at end of log file: %s", hex.EncodeToString(data))
 		}
 		return 0, nil, nil
 	}

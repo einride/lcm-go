@@ -12,7 +12,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/bpf"
 	"golang.org/x/net/ipv4"
-	"golang.org/x/xerrors"
 )
 
 type Decompressor interface {
@@ -29,11 +28,11 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 	// wildcard address prefix for all administratively-scoped (local) multicast addresses
 	packetConn, err := listenConfig.ListenPacket(ctx, "udp4", fmt.Sprintf("239.0.0.0:%d", opts.port))
 	if err != nil {
-		return nil, xerrors.Errorf("listen LCM UDP multicast: %w", err)
+		return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
 	}
 	udpConn := packetConn.(*net.UDPConn)
 	if err := udpConn.SetReadBuffer(opts.bufferSizeBytes); err != nil {
-		return nil, xerrors.Errorf("listen LCM UDP multicast: %w", err)
+		return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
 	}
 	conn := ipv4.NewPacketConn(udpConn)
 	if len(opts.ips) == 0 {
@@ -48,13 +47,13 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 	if opts.interfaceName != "" {
 		ifi, err := net.InterfaceByName(opts.interfaceName)
 		if err != nil {
-			return nil, xerrors.Errorf("listen LCM UDP multicast: interface %s: %w", opts.interfaceName, err)
+			return nil, fmt.Errorf("listen LCM UDP multicast: interface %s: %w", opts.interfaceName, err)
 		}
 		if ifi.Flags&net.FlagMulticast == 0 {
-			return nil, xerrors.Errorf("listen LCM UDP multicast: interface %s: not a multicast interface", ifi.Name)
+			return nil, fmt.Errorf("listen LCM UDP multicast: interface %s: not a multicast interface", ifi.Name)
 		}
 		if ifi.Flags&net.FlagUp == 0 {
-			return nil, xerrors.Errorf("listen LCM UDP multicast: interface %s: not up", ifi.Name)
+			return nil, fmt.Errorf("listen LCM UDP multicast: interface %s: not up", ifi.Name)
 		}
 		rx.ifi = ifi
 	}
@@ -64,22 +63,22 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 		// Note that the service port for transport layer protocol does not matter with this operation as joining
 		// groups affects only network and link layer protocols, such as IPv4 and Ethernet.
 		if err := conn.JoinGroup(rx.ifi, &net.UDPAddr{IP: ip}); err != nil {
-			return nil, xerrors.Errorf("listen LCM UDP multicast: IP %v: %w", ip, err)
+			return nil, fmt.Errorf("listen LCM UDP multicast: IP %v: %w", ip, err)
 		}
 	}
 	// contralFlags are the control flags used to configure the LCM connection.
 	const controlFlags = ipv4.FlagInterface | ipv4.FlagDst | ipv4.FlagSrc
 	if err := conn.SetControlMessage(controlFlags, true); err != nil {
-		return nil, xerrors.Errorf("listen LCM UDP multicast: %w", err)
+		return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
 	}
 	if runtime.GOOS == "linux" {
 		if len(opts.bpfProgram) > 0 {
 			rawBPFInstructions, err := bpf.Assemble(opts.bpfProgram)
 			if err != nil {
-				return nil, xerrors.Errorf("listen LCM UDP multicast: %w", err)
+				return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
 			}
 			if err := conn.SetBPF(rawBPFInstructions); err != nil {
-				return nil, xerrors.Errorf("listen LCM UDP multicast: %w", err)
+				return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
 			}
 		}
 	}
@@ -123,11 +122,11 @@ func (r *Receiver) Receive(ctx context.Context) error {
 		r.messageBufIndex = 0
 		deadline, _ := ctx.Deadline()
 		if err := r.conn.SetReadDeadline(deadline); err != nil {
-			return xerrors.Errorf("receive on LCM: %w", err)
+			return fmt.Errorf("receive on LCM: %w", err)
 		}
 		n, err := r.conn.ReadBatch(r.messageBuf, 0)
 		if err != nil {
-			return xerrors.Errorf("receive on LCM: %w", err)
+			return fmt.Errorf("receive on LCM: %w", err)
 		}
 		r.messageBufSize = n
 	}
@@ -135,22 +134,22 @@ func (r *Receiver) Receive(ctx context.Context) error {
 	r.messageBufIndex++
 	var cm ipv4.ControlMessage
 	if err := cm.Parse(curr.OOB[:curr.NN]); err != nil {
-		return xerrors.Errorf("receive on LCM: %w", err)
+		return fmt.Errorf("receive on LCM: %w", err)
 	}
 	r.srcAddr = cm.Src
 	r.dstAddr = cm.Dst
 	r.ifIndex = cm.IfIndex
 	if err := r.currMessage.unmarshal(curr.Buffers[0][:curr.N]); err != nil {
-		return xerrors.Errorf("receive on LCM: %w", err)
+		return fmt.Errorf("receive on LCM: %w", err)
 	}
 	params := strings.Split(r.currMessage.Params, "&")
 	if len(params) > 1 {
-		return xerrors.Errorf("receive multiple query params not supported")
+		return fmt.Errorf("receive multiple query params not supported")
 	}
 	if decompressor := r.decompressors[params[0]]; decompressor != nil {
 		data, err := decompressor.Decompress(r.currMessage.Data)
 		if err != nil {
-			return xerrors.Errorf("decompressor on LCM: %w", err)
+			return fmt.Errorf("decompressor on LCM: %w", err)
 		}
 		r.currMessage.Data = data
 	}
@@ -172,7 +171,7 @@ func (r *Receiver) ReceiveProto(ctx context.Context) error {
 		r.protoMessages[r.currMessage.Channel] = protoMessage
 	}
 	if err := proto.Unmarshal(r.currMessage.Data, protoMessage); err != nil {
-		return xerrors.Errorf("receive proto %s on LCM: %w", r.currMessage.Channel, err)
+		return fmt.Errorf("receive proto %s on LCM: %w", r.currMessage.Channel, err)
 	}
 	r.protoMessage = protoMessage
 	return nil
@@ -207,7 +206,7 @@ func (r *Receiver) InterfaceIndex() int {
 func (r *Receiver) Close() error {
 	for _, ip := range r.opts.ips {
 		if err := r.conn.LeaveGroup(r.ifi, &net.UDPAddr{IP: ip}); err != nil {
-			return xerrors.Errorf("close LCM receiver: %w", err)
+			return fmt.Errorf("close LCM receiver: %w", err)
 		}
 	}
 	return r.conn.Close()
