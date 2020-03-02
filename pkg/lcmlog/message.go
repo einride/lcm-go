@@ -96,9 +96,7 @@ func (m *Message) unmarshalBinary(b []byte) {
 	endOfChannel := indexOfChannel + channelLength
 	indexOfData := endOfChannel
 	endOfData := indexOfData + dataLength
-	channel, params := split(string(b[indexOfChannel:endOfChannel]), "?")
-	m.Channel = channel
-	m.Params = params
+	m.Channel, m.Params = split(string(b[indexOfChannel:endOfChannel]), "?")
 	m.Data = b[indexOfData:endOfData]
 }
 
