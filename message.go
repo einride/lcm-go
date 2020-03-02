@@ -46,13 +46,10 @@ type Message struct {
 
 // marshal an LCM message.
 func (m *Message) marshal(b []byte) (int, error) {
-	var rawChannel string
+	rawChannel := m.Channel
 	if m.Params != "" {
-		rawChannel = m.Channel + "?" + m.Params
-	} else {
-		rawChannel = m.Channel
+		rawChannel += "?" + m.Params
 	}
-
 	cLen := len(rawChannel)
 	if cLen > lengthOfLongestChannel {
 		return 0, fmt.Errorf("channel too long: %v bytes", len(m.Channel))
@@ -69,12 +66,12 @@ func (m *Message) marshal(b []byte) (int, error) {
 	return lengthOfHeaderMagic + lengthOfSequenceNumber + payloadSize, nil
 }
 
-func split(s string, c string) (string, string) {
-	i := strings.Index(s, c)
+func split(s string, c byte) (string, string) {
+	i := strings.IndexByte(s, c)
 	if i < 0 {
 		return s, ""
 	}
-	return s[:i], s[i+len(c):]
+	return s[:i], s[i+1:]
 }
 
 // unmarshal an LCM message.
@@ -92,10 +89,7 @@ func (m *Message) unmarshal(data []byte) error {
 		return errors.New("invalid channel: not null-terminated")
 	}
 	indexOfPayload := indexOfChannel + offsetOfNullByte + 1
-	channel, params := split(string(data[indexOfChannel:indexOfPayload-1]), "?")
-
-	m.Channel = channel
-	m.Params = params
+	m.Channel, m.Params = split(string(data[indexOfChannel:indexOfPayload-1]), '?')
 	m.SequenceNumber = sequence
 	m.Data = data[indexOfPayload:]
 	return nil
