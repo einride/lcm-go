@@ -146,7 +146,7 @@ func (r *Receiver) Receive(ctx context.Context) error {
 	if len(params) > 1 {
 		return fmt.Errorf("receive multiple query params not supported")
 	}
-	if decompressor := r.decompressors[params[0]]; decompressor != nil {
+	if decompressor, ok := r.decompressors[params[0]]; ok {
 		data, err := decompressor.Decompress(r.currMessage.Data)
 		if err != nil {
 			return fmt.Errorf("decompressor on LCM: %w", err)
