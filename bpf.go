@@ -22,14 +22,16 @@ func ShortMessageFilter() []bpf.Instruction {
 
 // ShortMessageChannelFilter accepts LCM short messages where the channel equals any of the specified channels.
 func ShortMessageChannelFilter(channels ...string) []bpf.Instruction {
-	const jumpNextChannelPlaceholder = 254
-	const estimatedInstructionsPerChannel = 30
+	const (
+		jumpNextChannelPlaceholder = 254
+		jumpRejectPlaceholder = 253
+		estimatedInstructionsPerChannel = 30
+	)
 	program := make([]bpf.Instruction, 0, estimatedInstructionsPerChannel*len(channels))
 	// accept only short messages
 	program = append(program,
 		bpf.LoadAbsolute{Off: indexOfUDPPayload + indexOfHeaderMagic, Size: 4},
-		bpf.JumpIf{Cond: bpf.JumpEqual, Val: shortMessageMagic, SkipTrue: 1},
-		bpf.RetConstant{Val: 0},
+		bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: shortMessageMagic, SkipTrue: jumpRejectPlaceholder},
 	)
 	// check for each channel, accept if any matches
 	for _, channel := range channels {
@@ -58,8 +60,8 @@ func ShortMessageChannelFilter(channels ...string) []bpf.Instruction {
 		program = append(program,
 			bpf.LoadAbsolute{Off: byteIndex, Size: 1},
 			// If there is a query parameter accept the message as is.
-			bpf.JumpIf{Cond: bpf.JumpEqual, Val: '?', SkipTrue: 1},
-			bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: 0, SkipTrue: 1},
+			bpf.JumpIf{Cond: bpf.JumpEqual, Val: 0, SkipTrue: 1},
+			bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: '?', SkipTrue: jumpNextChannelPlaceholder},
 			// Channel match, accept package.
 			bpf.RetConstant{Val: lengthOfLargestUDPMessage},
 		)
@@ -68,18 +70,24 @@ func ShortMessageChannelFilter(channels ...string) []bpf.Instruction {
 	program = append(program, bpf.RetConstant{Val: 0})
 	// Start with next channel pointing to the rejection we just added
 	nextChannelPos := uint8(len(program)) - 1
+	rejectPos := nextChannelPos
 	// Now we back-track through the program to find the placeholders and
-	// rewrite those to a real jump to the next channel (or the reject instructino).
-	for i := uint8(len(program)) - 1; i >= 3; i-- {
+	// rewrite those to a real jump to the next channel (or the reject instruction).
+	for i := uint8(len(program)) - 1; i > 0; i-- {
 		switch instr := program[i].(type) {
 		case bpf.JumpIf:
-			if instr.SkipTrue != jumpNextChannelPlaceholder {
+			switch instr.SkipTrue {
+			case jumpNextChannelPlaceholder :
+				instr.SkipTrue = nextChannelPos - i - 1 // Remove one, since the skip is "off by one".
+			case jumpRejectPlaceholder :
+				instr.SkipTrue = rejectPos - i - 1
+			default:
 				continue
 			}
-			instr.SkipTrue = nextChannelPos - i - 1 // Remove one, since the skip is "off by one".
 			program[i] = instr
 		case bpf.LoadAbsolute:
-			// Each channel matching starts with a load of the first byte in channel.
+			// Each channel matching starts with a load of the first byte, uint16 or uint32 in channel.
+			// If it's not, it's not the start of a the channel name
 			if instr.Off != indexOfUDPPayload+indexOfChannel {
 				continue
 			}
