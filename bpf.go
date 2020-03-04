@@ -59,8 +59,8 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 		byteIndex := indexOfUDPPayload + indexOfChannel + uint32(len(channel))
 		program = append(program,
 			bpf.LoadAbsolute{Off: byteIndex, Size: 1},
-			// If there is a query parameter accept the message as is.
 			bpf.JumpIf{Cond: bpf.JumpEqual, Val: 0, SkipTrue: 1},
+			// If there is a query parameter accept the message as is.
 			bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: '?', SkipTrue: jumpNextChannelPlaceholder},
 			// Channel match, accept package.
 			bpf.RetConstant{Val: lengthOfLargestUDPMessage},
@@ -68,18 +68,18 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 	}
 	// No channel match, reject package.
 	program = append(program, bpf.RetConstant{Val: 0})
+	rejectPos := uint8(len(program)) - 1
 	// Start with next channel pointing to the rejection we just added
-	nextChannelPos := uint8(len(program)) - 1
-	rejectPos := nextChannelPos
+	nextChannelPos := rejectPos
 	// Now we back-track through the program to find the placeholders and
 	// rewrite those to a real jump to the next channel (or the reject instruction).
 	for i := uint8(len(program)) - 1; i > 0; i-- {
 		switch instr := program[i].(type) {
 		case bpf.JumpIf:
 			switch instr.SkipTrue {
-			case jumpNextChannelPlaceholder :
+			case jumpNextChannelPlaceholder:
 				instr.SkipTrue = nextChannelPos - i - 1 // Remove one, since the skip is "off by one".
-			case jumpRejectPlaceholder :
+			case jumpRejectPlaceholder:
 				instr.SkipTrue = rejectPos - i - 1
 			default:
 				continue
