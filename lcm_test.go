@@ -37,7 +37,7 @@ func TestLCM_OneTransmitter_OneReceiver(t *testing.T) {
 		ctx,
 		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip, Port: freePort}),
-		WithTransmitCompression("first", lz4.NewCompressor()),
+		WithTransmitCompression(lz4.NewCompressor(), "first"),
 	)
 	require.NoError(t, err)
 	defer func() {
@@ -223,7 +223,7 @@ func TestLCM_OneTransmitter_OneReceiver_ManyCompressed(t *testing.T) {
 		ctx,
 		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip, Port: freePort}),
-		WithTransmitCompression("first", lz4.NewCompressor()),
+		WithTransmitCompression(lz4.NewCompressor(), "first"),
 	)
 	require.NoError(t, err)
 	defer func() {
@@ -274,7 +274,7 @@ func TestLCM_ProtoTransmitter_ProtoReceiver(t *testing.T) {
 		ctx,
 		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip, Port: freePort}),
-		WithTransmitCompression(lz4.NewCompressor(), &timestamp.Timestamp{}, &duration.Duration{}),
+		WithTransmitCompressionProto(lz4.NewCompressor(), &timestamp.Timestamp{}, &duration.Duration{}),
 	)
 	require.NoError(t, err)
 	defer func() {
