@@ -33,14 +33,13 @@ func (s *Scanner) Scan() bool {
 	}
 	s.msg.unmarshalBinary(s.sc.Bytes())
 	params := strings.Split(s.msg.Params, "&")
-	if decompressor := s.decompressors[params[0]]; decompressor != nil {
+	if decompressor, ok := s.decompressors[params[0]]; ok {
 		data, err := decompressor.Decompress(s.msg.Data)
 		if err != nil {
 			return false
 		}
 		s.msg.Data = data
 	}
-
 	return true
 }
 

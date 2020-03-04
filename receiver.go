@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"reflect"
 	"runtime"
 	"strings"
 
@@ -81,6 +80,9 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 				return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
 			}
 		}
+	}
+	for _, msg := range opts.protos {
+		rx.protoMessages[proto.MessageName(msg)] = proto.Clone(msg)
 	}
 	// allocate memory for batch reads
 	for i := 0; i < opts.batchSize; i++ {
@@ -163,12 +165,7 @@ func (r *Receiver) ReceiveProto(ctx context.Context) error {
 	}
 	protoMessage, ok := r.protoMessages[r.currMessage.Channel]
 	if !ok {
-		messageType := proto.MessageType(r.currMessage.Channel)
-		if messageType == nil {
-			return nil // don't error on encountering non-proto channels
-		}
-		protoMessage = reflect.New(messageType.Elem()).Interface().(proto.Message)
-		r.protoMessages[r.currMessage.Channel] = protoMessage
+		return nil // ignore messages we aren't listening to
 	}
 	if err := proto.Unmarshal(r.currMessage.Data, protoMessage); err != nil {
 		return fmt.Errorf("receive proto %s on LCM: %w", r.currMessage.Channel, err)
