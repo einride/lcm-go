@@ -16,7 +16,7 @@ func TestShortMessageChannelFilter(t *testing.T) {
 	}{
 		{
 			name:    "accepted 1",
-			program: ShortMessageChannelFilter("foo", "barbaz"),
+			program: shortMessageChannelFilter("foo", "barbaz"),
 			packet: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // UDP header
 				0x4c, 0x43, 0x30, 0x32, // magic
@@ -27,7 +27,7 @@ func TestShortMessageChannelFilter(t *testing.T) {
 		},
 		{
 			name:    "accepted query parameters",
-			program: ShortMessageChannelFilter("foo", "barbaz"),
+			program: shortMessageChannelFilter("foo", "barbaz"),
 			packet: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // UDP header
 				0x4c, 0x43, 0x30, 0x32, // magic
@@ -38,7 +38,7 @@ func TestShortMessageChannelFilter(t *testing.T) {
 		},
 		{
 			name:    "accepted 2",
-			program: ShortMessageChannelFilter("foo", "barbaz"),
+			program: shortMessageChannelFilter("foo", "barbaz"),
 			packet: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // UDP header
 				0x4c, 0x43, 0x30, 0x32, // magic
@@ -49,7 +49,7 @@ func TestShortMessageChannelFilter(t *testing.T) {
 		},
 		{
 			name:    "rejected due to wrong channel",
-			program: ShortMessageChannelFilter("foo", "barbaz"),
+			program: shortMessageChannelFilter("foo", "barbaz"),
 			packet: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // UDP header
 				0x4c, 0x43, 0x30, 0x32, // magic
@@ -60,7 +60,7 @@ func TestShortMessageChannelFilter(t *testing.T) {
 		},
 		{
 			name:    "rejected due to wrong header magic",
-			program: ShortMessageChannelFilter("foo", "barbaz"),
+			program: shortMessageChannelFilter("foo", "barbaz"),
 			packet: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // UDP header
 				0x4c, 0x43, 0x30, 0x00, // wrong magic

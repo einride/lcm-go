@@ -3,6 +3,7 @@ package lcm
 import (
 	"net"
 
+	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/bpf"
 )
 
@@ -14,6 +15,7 @@ type receiverOptions struct {
 	bufferSizeBytes int
 	batchSize       int
 	bpfProgram      []bpf.Instruction
+	protos          []proto.Message
 }
 
 // DefaultMulticastIP returns the default LCM multicast IP.
@@ -30,7 +32,7 @@ func defaultReceiverOptions() *receiverOptions {
 		batchSize:       5,
 		port:            DefaultPort,
 		bufferSizeBytes: 2097152,              // 2MB (from the LCM documentation)
-		bpfProgram:      ShortMessageFilter(), // TODO: add support for fragmented messages
+		bpfProgram:      shortMessageFilter(), // TODO: add support for fragmented messages
 	}
 }
 
@@ -66,6 +68,13 @@ func WithReceiveAddress(ip net.IP) ReceiverOption {
 func WithReceiveBPF(program []bpf.Instruction) ReceiverOption {
 	return func(o *receiverOptions) {
 		o.bpfProgram = program
+	}
+}
+
+func WithReceiveProtos(msgs ...proto.Message) ReceiverOption {
+	return func(o *receiverOptions) {
+		o.bpfProgram = shortProtoMessageFilter(msgs...)
+		o.protos = msgs
 	}
 }
 
