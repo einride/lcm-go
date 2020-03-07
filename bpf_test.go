@@ -43,12 +43,23 @@ func TestShortMessageChannelFilter(t *testing.T) {
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // UDP header
 				0x4c, 0x43, 0x30, 0x32, // magic
 				0x00, 0x00, 0x00, 0x01, // sequence number
-				'b', 'a', 'r', 'b', 'a', 'z', 0, // channel
+				'b', 'a', 'r', 'b', 'a', 'z', 0, 0, // channel
 			},
 			expected: 0xffff,
 		},
 		{
-			name:    "rejected due to wrong channel",
+			name:    "accepted 3",
+			program: shortMessageChannelFilter("foo", "tutan"),
+			packet: append([]byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // UDP header
+				0x4c, 0x43, 0x30, 0x32, // magic
+				0x00, 0x00, 0x00, 0x01, // sequence number
+			}, []byte("tutan\x00")..., // channel
+			),
+			expected: 0xffff,
+		},
+		{
+			name:    "rejected due to wrong c1hannel",
 			program: shortMessageChannelFilter("foo", "barbaz"),
 			packet: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // UDP header
