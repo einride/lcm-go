@@ -40,29 +40,38 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 	)
 	// check for each channel, accept if any matches
 	for _, channel := range channels {
-		channel := []byte(channel)
-		for i, size := 0, 0; i < len(channel); i += size {
-			remaining := channel[i:]
-			var val uint32
-			switch len(remaining) {
-			case 1:
-				val, size = uint32(remaining[0]), 1
-			case 2, 3:
-				val, size = uint32(binary.BigEndian.Uint16(remaining)), 2
-			default:
-				val, size = binary.BigEndian.Uint32(remaining), 4
-			}
+		remaining := []byte(channel)
+		var i int
+		for ; len(remaining) >= 4; i += 4 {
 			program = append(program,
-				bpf.LoadAbsolute{Off: offsetChannel + uint32(i), Size: size},
-				bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: val, SkipTrue: jumpNextChannelPlaceholder},
+				bpf.LoadAbsolute{Off: offsetChannel + uint32(i), Size: 4},
+				bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: binary.BigEndian.Uint32(remaining), SkipTrue: jumpNextChannelPlaceholder},
 			)
+			remaining = remaining[4:]
+		}
+		var val uint32
+		var size int
+		switch len(remaining) {
+		case 0:
+			size = 1
+		case 1:
+			val, size = uint32(remaining[0])<<8, 2
+		case 2:
+			val, size = uint32(remaining[1])<<8|uint32(remaining[0])<<16, 4
+		case 3:
+			val, size = uint32(remaining[2])<<8|uint32(remaining[1])<<16|uint32(remaining[0])<<24, 4
+		}
+		program = append(program, bpf.LoadAbsolute{Off: offsetChannel + uint32(i), Size: size})
+		if len(remaining) == 2 {
+			// When this happens we actually read 1 byte into the payload. So a packet with no payload
+			// will be rejected too. But why would you do that?
+			program = append(program, bpf.ALUOpConstant{Op: bpf.ALUOpShiftRight, Val: 0x8})
 		}
 		program = append(program,
-			bpf.LoadAbsolute{Off: offsetChannel + uint32(len(channel)), Size: 1},
 			// Channel match, accept package.
-			bpf.JumpIf{Cond: bpf.JumpEqual, Val: 0, SkipTrue: jumpAcceptPlaceholder},
+			bpf.JumpIf{Cond: bpf.JumpEqual, Val: val, SkipTrue: jumpAcceptPlaceholder},
 			// Or if there is a query parameter accept the message as is.
-			bpf.JumpIf{Cond: bpf.JumpEqual, Val: '?', SkipTrue: jumpAcceptPlaceholder},
+			bpf.JumpIf{Cond: bpf.JumpEqual, Val: val | '?', SkipTrue: jumpAcceptPlaceholder},
 		)
 	}
 	program = append(program,
