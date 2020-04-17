@@ -35,9 +35,11 @@ go-mod-tidy:
 # funlen: tests with many testcases become too long, but should not be split.
 # unused: buggy with GolangCI-Lint 1.18.0
 # godox: we keep todos in the history
+# wsl: doesn't match Einrides style guides
+# gomnd: Normally good, but not very helpful in this lowlevel package
 .PHONY: go-lint
 go-lint: $(GOLANGCI_LINT)
-	$(GOLANGCI_LINT) run --enable-all --disable funlen,godox
+	$(GOLANGCI_LINT) run --enable-all --disable funlen,godox,wsl,gomnd
 
 # go-test: run Go test suite
 .PHONY: go-test
