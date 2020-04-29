@@ -9,25 +9,26 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/testing/protocmp"
+	"gotest.tools/v3/assert"
 )
 
 var _ = io.WriterTo(&Message{})
 
 func TestScanner_Scan_Testdata(t *testing.T) {
 	f, err := os.Open("testdata/lcmlog.00")
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	defer func() {
-		require.NoError(t, f.Close())
+		assert.NilError(t, f.Close())
 	}()
 	sc := NewScanner(f)
 	var i int32
 	for sc.Scan() {
-		require.Equal(t, "test", sc.Message().Channel)
-		require.Equal(t, uint64(i), sc.Message().EventNumber)
+		assert.Equal(t, "test", sc.Message().Channel)
+		assert.Equal(t, uint64(i), sc.Message().EventNumber)
 		ts := &timestamp.Timestamp{}
-		require.NoError(t, proto.Unmarshal(sc.Message().Data, ts))
-		require.Equal(t, &timestamp.Timestamp{Nanos: i}, ts)
+		assert.NilError(t, proto.Unmarshal(sc.Message().Data, ts))
+		assert.DeepEqual(t, &timestamp.Timestamp{Nanos: i}, ts, protocmp.Transform())
 		i++
 	}
 }
@@ -36,14 +37,14 @@ func TestMarshalling(t *testing.T) {
 	m := Message{EventNumber: 1, Timestamp: time.Unix(300, 10e6), Channel: "test", Data: []byte("test_data")}
 	var newM Message
 	newM.unmarshalBinary(m.marshalBinary())
-	require.Equal(t, m.Timestamp, newM.Timestamp)
-	require.Equal(t, m, newM)
+	assert.DeepEqual(t, m.Timestamp, newM.Timestamp)
+	assert.DeepEqual(t, m, newM)
 }
 
 func TestWriteToFile(t *testing.T) {
 	fileName := "test.log"
 	file, err := os.Create(fileName)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	messages := []*Message{
 		{EventNumber: 1, Timestamp: time.Unix(300, 10e6), Channel: "test", Data: []byte("test_data")},
 		{EventNumber: 8, Timestamp: time.Unix(300, 10e6), Channel: "testt", Data: []byte("test_data2")},
@@ -52,35 +53,35 @@ func TestWriteToFile(t *testing.T) {
 	for i := range messages {
 		m := *messages[i]
 		_, ok := messagesMap[m.EventNumber]
-		require.False(t, ok)
+		assert.Assert(t, !ok)
 		messagesMap[m.EventNumber] = &m
 	}
 	for i := range messages {
 		_, err = messages[i].WriteTo(file)
-		require.NoError(t, err)
+		assert.NilError(t, err)
 	}
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	err = file.Close()
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	newfile, err := os.Open(fileName)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	scanner := NewScanner(newfile)
 	newMessages := []*Message{}
 	for scanner.Scan() {
 		m := scanner.Message()
-		require.Equal(t, messagesMap[m.EventNumber], m)
+		assert.DeepEqual(t, messagesMap[m.EventNumber], m)
 		newMessages = append(newMessages, m)
 	}
-	require.Equal(t, len(messages), len(newMessages))
+	assert.Equal(t, len(messages), len(newMessages))
 	err = os.Remove(fileName)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 }
 
 func TestWriteToFileFromFile(t *testing.T) {
 	f, err := os.Open("testdata/lcmlog.00")
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	defer func() {
-		require.NoError(t, f.Close())
+		assert.NilError(t, f.Close())
 	}()
 	sc := NewScanner(f)
 	messages := []*Message{}
@@ -92,43 +93,43 @@ func TestWriteToFileFromFile(t *testing.T) {
 	}
 	fileName := "test.log"
 	file, err := os.Create(fileName)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	for i := range messages {
 		_, err = messages[i].WriteTo(file)
-		require.NoError(t, err)
+		assert.NilError(t, err)
 	}
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	err = file.Close()
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	newfile, err := os.Open(fileName)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	scanner := NewScanner(newfile)
 	newMessages := []*Message{}
 	for scanner.Scan() {
 		m := messagesMap[scanner.Message().EventNumber]
 		newMessage := *scanner.Message()
-		require.Equal(t, m, &newMessage)
+		assert.DeepEqual(t, m, &newMessage)
 		newMessages = append(newMessages, &newMessage)
 	}
-	require.Equal(t, len(messages), len(newMessages))
-	require.Equal(t, messages, newMessages)
+	assert.Equal(t, len(messages), len(newMessages))
+	assert.DeepEqual(t, messages, newMessages)
 	err = os.Remove(fileName)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 }
 
 func TestScanner_Scan_Compressed_Testdata(t *testing.T) {
 	f, err := os.Open("testdata/lcmlog_compressed.00")
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	defer func() {
-		require.NoError(t, f.Close())
+		assert.NilError(t, f.Close())
 	}()
 	sc := NewScanner(f)
 	var j int32
 	for i := 100; i < 110; i++ {
-		require.True(t, sc.Scan())
-		require.Equal(t, sc.Message().Data, []byte(strings.Repeat("foo", i)))
-		require.Equal(t, "first", sc.Message().Channel)
-		require.Equal(t, uint64(j), sc.Message().EventNumber)
+		assert.Assert(t, sc.Scan())
+		assert.DeepEqual(t, sc.Message().Data, []byte(strings.Repeat("foo", i)))
+		assert.Equal(t, "first", sc.Message().Channel)
+		assert.Equal(t, uint64(j), sc.Message().EventNumber)
 		j++
 	}
 }

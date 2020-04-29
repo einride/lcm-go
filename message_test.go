@@ -3,7 +3,7 @@ package lcm
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"gotest.tools/v3/assert"
 )
 
 func TestMessage_MarshalUnmarshal(t *testing.T) {
@@ -60,14 +60,14 @@ func TestMessage_MarshalUnmarshal(t *testing.T) {
 			t.Run("marshal", func(t *testing.T) {
 				var data [lengthOfLargestUDPMessage]byte
 				n, err := tt.message.marshal(data[:])
-				require.NoError(t, err)
-				require.Equal(t, len(tt.data), n)
-				require.Equal(t, tt.data, data[:n])
+				assert.NilError(t, err)
+				assert.Equal(t, len(tt.data), n)
+				assert.DeepEqual(t, tt.data, data[:n])
 			})
 			t.Run("unmarshal", func(t *testing.T) {
 				var msg Message
-				require.NoError(t, msg.unmarshal(tt.data))
-				require.Equal(t, tt.message, msg)
+				assert.NilError(t, msg.unmarshal(tt.data))
+				assert.DeepEqual(t, tt.message, msg)
 			})
 		})
 	}
@@ -110,8 +110,8 @@ func TestMessage_Unmarshal_Errors(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			var msg Message
 			err := msg.unmarshal(tt.data)
-			require.NotNil(t, err)
-			require.Equal(t, tt.err, err.Error())
+			assert.Assert(t, err != nil)
+			assert.Equal(t, tt.err, err.Error())
 		})
 	}
 }
