@@ -37,9 +37,10 @@ go-mod-tidy:
 # godox: we keep todos in the history
 # wsl: doesn't match Einrides style guides
 # gomnd: Normally good, but not very helpful in this lowlevel package
+# staticcheck: TODO: enable when migrated away from deprecated protobuf APIs
 .PHONY: go-lint
 go-lint: $(GOLANGCI_LINT)
-	$(GOLANGCI_LINT) run --enable-all --disable funlen,godox,wsl,gomnd
+	$(GOLANGCI_LINT) run --enable-all --disable funlen,godox,wsl,gomnd,staticcheck
 
 # go-test: run Go test suite
 .PHONY: go-test

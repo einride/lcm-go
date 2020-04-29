@@ -3,8 +3,8 @@ package lcm
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"golang.org/x/net/bpf"
+	"gotest.tools/v3/assert"
 )
 
 func TestShortMessageChannelFilter(t *testing.T) {
@@ -84,10 +84,10 @@ func TestShortMessageChannelFilter(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			vm, err := bpf.NewVM(tt.program)
-			require.NoError(t, err)
+			assert.NilError(t, err)
 			n, err := vm.Run(tt.packet)
-			require.NoError(t, err)
-			require.Equal(t, tt.expected, n)
+			assert.NilError(t, err)
+			assert.Equal(t, tt.expected, n)
 		})
 	}
 }
