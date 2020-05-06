@@ -3,8 +3,8 @@ package lcm
 import (
 	"encoding/binary"
 
-	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/bpf"
+	"google.golang.org/protobuf/proto"
 )
 
 // indexOfUDPPayload is the first byte index of the payload in a a UDP packet.
@@ -109,7 +109,7 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 func shortProtoMessageFilter(msgs ...proto.Message) []bpf.Instruction {
 	channels := make([]string, len(msgs))
 	for i, msg := range msgs {
-		channels[i] = proto.MessageName(msg)
+		channels[i] = string(msg.ProtoReflect().Descriptor().FullName())
 	}
 	return shortMessageChannelFilter(channels...)
 }

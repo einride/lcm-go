@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/nettest"
+	"google.golang.org/protobuf/proto"
 )
 
 // Transmitter represents an LCM Transmitter instance.
@@ -17,7 +17,6 @@ type Transmitter struct {
 	sequenceNumber uint32
 	messageBuf     []ipv4.Message
 	payloadBuf     [lengthOfLargestUDPMessage]byte
-	protoBuf       proto.Buffer
 	msg            Message
 }
 
@@ -84,16 +83,20 @@ func getMulticastInterface() (*net.Interface, error) {
 
 // TransmitProto transmits a protobuf message on the channel given by the message's fully-qualified name.
 func (t *Transmitter) TransmitProto(ctx context.Context, m proto.Message) error {
-	return t.TransmitProtoOnChannel(ctx, proto.MessageName(m), m)
+	name := m.ProtoReflect().Descriptor().FullName()
+	if !name.IsValid() {
+		return fmt.Errorf("unable to derive name of proto message: %v", name)
+	}
+	return t.TransmitProtoOnChannel(ctx, string(name), m)
 }
 
 // TransmitProto transmits a protobuf message.
 func (t *Transmitter) TransmitProtoOnChannel(ctx context.Context, channel string, m proto.Message) error {
-	t.protoBuf.Reset()
-	if err := t.protoBuf.Marshal(m); err != nil {
+	b, err := proto.Marshal(m)
+	if err != nil {
 		return fmt.Errorf("transmit proto on channel %s: %w", channel, err)
 	}
-	return t.Transmit(ctx, channel, t.protoBuf.Bytes())
+	return t.Transmit(ctx, channel, b)
 }
 
 // Transmit a raw payload.
