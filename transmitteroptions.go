@@ -3,7 +3,7 @@ package lcm
 import (
 	"net"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // transmitterOptions are the configuration options for an LCM transmitter.
@@ -54,7 +54,8 @@ func WithTransmitMulticastLoopback(b bool) TransmitterOption {
 func WithTransmitCompressionProto(compressor Compressor, msgs ...proto.Message) TransmitterOption {
 	return func(opts *transmitterOptions) {
 		for _, msg := range msgs {
-			opts.compressor[proto.MessageName(msg)] = compressor
+			name := string(msg.ProtoReflect().Descriptor().FullName())
+			opts.compressor[name] = compressor
 		}
 	}
 }

@@ -3,8 +3,8 @@ package lcm
 import (
 	"net"
 
-	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/bpf"
+	"google.golang.org/protobuf/proto"
 )
 
 // receiverOptions are the configuration options for an LCM receiver.

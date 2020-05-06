@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/einride/lcm-go/pkg/lz4"
-	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/bpf"
 	"golang.org/x/net/ipv4"
+	"google.golang.org/protobuf/proto"
 )
 
 type Decompressor interface {
@@ -80,7 +80,9 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 		}
 	}
 	for _, msg := range opts.protos {
-		rx.protoMessages[proto.MessageName(msg)] = proto.Clone(msg)
+		// TODO: Should we perform validation here?
+		name := msg.ProtoReflect().Descriptor().FullName()
+		rx.protoMessages[string(name)] = proto.Clone(msg)
 	}
 	// allocate memory for batch reads
 	for i := 0; i < opts.batchSize; i++ {
