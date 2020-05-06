@@ -1,6 +1,7 @@
 package lcm
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -17,6 +18,7 @@ type Transmitter struct {
 	sequenceNumber uint32
 	messageBuf     []ipv4.Message
 	payloadBuf     [lengthOfLargestUDPMessage]byte
+	protoBuf       bytes.Buffer
 	msg            Message
 }
 
@@ -92,7 +94,9 @@ func (t *Transmitter) TransmitProto(ctx context.Context, m proto.Message) error 
 
 // TransmitProto transmits a protobuf message.
 func (t *Transmitter) TransmitProtoOnChannel(ctx context.Context, channel string, m proto.Message) error {
-	b, err := proto.Marshal(m)
+	// Reuse a buffer to avoid data allocation of a new byte slice every time
+	t.protoBuf.Reset()
+	b, err := proto.MarshalOptions{}.MarshalAppend(t.protoBuf.Bytes(), m)
 	if err != nil {
 		return fmt.Errorf("transmit proto on channel %s: %w", channel, err)
 	}
