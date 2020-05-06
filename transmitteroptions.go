@@ -50,7 +50,7 @@ func WithTransmitMulticastLoopback(b bool) TransmitterOption {
 	}
 }
 
-// WithTransmitCompression configures compressor for protos
+// WithTransmitCompressionProto configures compressor for protos.
 func WithTransmitCompressionProto(compressor Compressor, msgs ...proto.Message) TransmitterOption {
 	return func(opts *transmitterOptions) {
 		for _, msg := range msgs {
@@ -59,7 +59,7 @@ func WithTransmitCompressionProto(compressor Compressor, msgs ...proto.Message) 
 	}
 }
 
-// WithTransmitCompression configures compressor for channels
+// WithTransmitCompression configures compressor for channels.
 func WithTransmitCompression(compressor Compressor, channels ...string) TransmitterOption {
 	return func(opts *transmitterOptions) {
 		for _, channel := range channels {
