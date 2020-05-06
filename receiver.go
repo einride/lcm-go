@@ -70,15 +70,13 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 	if err := conn.SetControlMessage(controlFlags, true); err != nil {
 		return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
 	}
-	if runtime.GOOS == "linux" {
-		if len(opts.bpfProgram) > 0 && len(opts.bpfProgram) < 256 {
-			rawBPFInstructions, err := bpf.Assemble(opts.bpfProgram)
-			if err != nil {
-				return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
-			}
-			if err := conn.SetBPF(rawBPFInstructions); err != nil {
-				return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
-			}
+	if runtime.GOOS == "linux" && len(opts.bpfProgram) > 0 && len(opts.bpfProgram) < 256 {
+		rawBPFInstructions, err := bpf.Assemble(opts.bpfProgram)
+		if err != nil {
+			return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
+		}
+		if err := conn.SetBPF(rawBPFInstructions); err != nil {
+			return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
 		}
 	}
 	for _, msg := range opts.protos {

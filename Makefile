@@ -38,9 +38,10 @@ go-mod-tidy:
 # wsl: doesn't match Einrides style guides
 # gomnd: Normally good, but not very helpful in this lowlevel package
 # staticcheck: TODO: enable when migrated away from deprecated protobuf APIs
+# testpackage: complains about using external package name for tests
 .PHONY: go-lint
 go-lint: $(GOLANGCI_LINT)
-	$(GOLANGCI_LINT) run --enable-all --disable funlen,godox,wsl,gomnd,staticcheck
+	$(GOLANGCI_LINT) run --enable-all --disable funlen,godox,wsl,gomnd,staticcheck,testpackage
 
 # go-test: run Go test suite
 .PHONY: go-test
