@@ -45,7 +45,7 @@ import (
 // Each header is immediately followed by the UTF-8 encoding of the LCM channel, and then the message data.
 // The channel is not NULL-terminated.
 //
-// All integers are packed in network order (big endian)
+// All integers are packed in network order (big endian).
 const (
 	syncWord              = 0xeda1da01
 	lengthOfSyncWord      = 4
