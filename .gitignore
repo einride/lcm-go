@@ -1,3 +1,2 @@
 .idea
-.gobincache
-test/mocks
+tools/*/*/

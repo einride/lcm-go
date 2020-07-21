@@ -3,44 +3,20 @@
 all: \
 	markdown-lint \
 	go-lint \
+	go-review \
 	go-test \
-	go-mod-tidy
+	go-mod-tidy \
+	git-verify-nodiff
 
-# clean: remove generated build files
-.PHONY: clean
-clean:
-	rm -rf build test/mocks
-
-export GO111MODULE := on
-
-.PHONY: build
-build:
-	@git submodule update --init --recursive $@
-
-include build/rules.mk
-build/rules.mk: build
-	@# included in submodule: build
-
-# markdown-lint: lint Markdown files
-.PHONY: markdown-lint
-markdown-lint: $(PRETTIER)
-	$(PRETTIER) --check **/*.md --parser markdown
+include tools/git-verify-nodiff/rules.mk
+include tools/golangci-lint/rules.mk
+include tools/goreview/rules.mk
+include tools/prettier/rules.mk
 
 # go-mod-tidy: update Go module files
 .PHONY: go-mod-tidy
 go-mod-tidy:
 	go mod tidy -v
-
-# go-lint: lint Go code
-# funlen: tests with many testcases become too long, but should not be split.
-# unused: buggy with GolangCI-Lint 1.18.0
-# godox: we keep todos in the history
-# wsl: doesn't match Einrides style guides
-# gomnd: Normally good, but not very helpful in this lowlevel package
-# testpackage: Complains that test files should be tested with external package naming
-.PHONY: go-lint
-go-lint: $(GOLANGCI_LINT)
-	$(GOLANGCI_LINT) run --enable-all --disable funlen,godox,wsl,gomnd,testpackage
 
 # go-test: run Go test suite
 .PHONY: go-test
