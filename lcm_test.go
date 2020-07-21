@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/einride/lcm-go/pkg/lz4"
-	"github.com/golang/protobuf/ptypes/duration"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"golang.org/x/net/nettest"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/testing/protocmp"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"gotest.tools/v3/assert"
 )
 
@@ -263,8 +263,8 @@ func TestLCM_ProtoTransmitter_ProtoReceiver(t *testing.T) {
 		WithReceivePort(freePort),
 		WithReceiveAddress(ip),
 		WithReceiveProtos(
-			&timestamp.Timestamp{},
-			&duration.Duration{},
+			&timestamppb.Timestamp{},
+			&durationpb.Duration{},
 		),
 	)
 	assert.NilError(t, err)
@@ -275,7 +275,7 @@ func TestLCM_ProtoTransmitter_ProtoReceiver(t *testing.T) {
 		ctx,
 		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip, Port: freePort}),
-		WithTransmitCompressionProto(lz4.NewCompressor(), &timestamp.Timestamp{}, &duration.Duration{}),
+		WithTransmitCompressionProto(lz4.NewCompressor(), &timestamppb.Timestamp{}, &durationpb.Duration{}),
 	)
 	assert.NilError(t, err)
 	defer func() {
@@ -288,11 +288,11 @@ func TestLCM_ProtoTransmitter_ProtoReceiver(t *testing.T) {
 			return rx.ReceiveProto(ctx)
 		})
 		// and the transmitter transmits
-		assert.NilError(t, tx.TransmitProto(ctx, &timestamp.Timestamp{Seconds: 1, Nanos: 2}))
+		assert.NilError(t, tx.TransmitProto(ctx, &timestamppb.Timestamp{Seconds: 1, Nanos: 2}))
 		// then the receiver should receive the transmitted message
 		assert.NilError(t, g.Wait())
 		assert.Equal(t, "google.protobuf.Timestamp", rx.Message().Channel)
-		assert.DeepEqual(t, &timestamp.Timestamp{Seconds: 1, Nanos: 2}, rx.ProtoMessage(), protocmp.Transform())
+		assert.DeepEqual(t, &timestamppb.Timestamp{Seconds: 1, Nanos: 2}, rx.ProtoMessage(), protocmp.Transform())
 	})
 	t.Run("receive second", func(t *testing.T) {
 		// when the receiver receives
@@ -301,11 +301,11 @@ func TestLCM_ProtoTransmitter_ProtoReceiver(t *testing.T) {
 			return rx.ReceiveProto(ctx)
 		})
 		// and the transmitter transmits
-		assert.NilError(t, tx.TransmitProto(ctx, &duration.Duration{Seconds: 1, Nanos: 2}))
+		assert.NilError(t, tx.TransmitProto(ctx, &durationpb.Duration{Seconds: 1, Nanos: 2}))
 		// then the receiver should receive the transmitted message
 		assert.NilError(t, g.Wait())
 		assert.Equal(t, "google.protobuf.Duration", rx.Message().Channel)
-		assert.DeepEqual(t, &duration.Duration{Seconds: 1, Nanos: 2}, rx.ProtoMessage(), protocmp.Transform())
+		assert.DeepEqual(t, &durationpb.Duration{Seconds: 1, Nanos: 2}, rx.ProtoMessage(), protocmp.Transform())
 	})
 }
 
