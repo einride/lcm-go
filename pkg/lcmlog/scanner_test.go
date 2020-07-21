@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"gotest.tools/v3/assert"
 )
 
@@ -26,9 +26,9 @@ func TestScanner_Scan_Testdata(t *testing.T) {
 	for sc.Scan() {
 		assert.Equal(t, "test", sc.Message().Channel)
 		assert.Equal(t, uint64(i), sc.Message().EventNumber)
-		ts := &timestamp.Timestamp{}
+		ts := &timestamppb.Timestamp{}
 		assert.NilError(t, proto.Unmarshal(sc.Message().Data, ts))
-		assert.DeepEqual(t, &timestamp.Timestamp{Nanos: i}, ts, protocmp.Transform())
+		assert.DeepEqual(t, &timestamppb.Timestamp{Nanos: i}, ts, protocmp.Transform())
 		i++
 	}
 }
