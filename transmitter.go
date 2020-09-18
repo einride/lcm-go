@@ -20,6 +20,7 @@ type Transmitter struct {
 	payloadBuf     [lengthOfLargestUDPMessage]byte
 	protoBuf       bytes.Buffer
 	msg            Message
+	fragmentMsg    FragmentMessage
 }
 
 type Compressor interface {
@@ -103,6 +104,54 @@ func (t *Transmitter) TransmitProtoOnChannel(ctx context.Context, channel string
 	return t.Transmit(ctx, channel, b)
 }
 
+func (t *Transmitter) TransmitFragments(ctx context.Context, channel string, data []byte) error {
+	fragmentsCount := len(data) / ethernetMTU
+	if fragmentsCount == 1 {
+		if err := t.Transmit(ctx, channel, data); err != nil {
+			return fmt.Errorf("transmit fragments: %w", err)
+		}
+		return nil
+	}
+	t.msg.SequenceNumber = t.sequenceNumber
+	t.sequenceNumber++
+	for i := 0; i < len(data); i += ethernetMTU {
+		if len(data[i:]) >= ethernetMTU {
+			t.fragmentMsg.Data = data[i : i+ethernetMTU]
+		} else {
+			t.fragmentMsg.Data = data[i:]
+		}
+		t.fragmentMsg.Channel = channel
+		n, err := t.fragmentMsg.marshal(t.payloadBuf[i:i])
+		if err != nil {
+			return fmt.Errorf("transmit to LCM: %w", err)
+		}
+		for i := range t.messageBuf {
+			t.messageBuf[i].Buffers[0] = t.payloadBuf[:n]
+			t.messageBuf[i].N = n
+		}
+		deadline, _ := ctx.Deadline()
+		if err := t.conn.SetWriteDeadline(deadline); err != nil {
+			return fmt.Errorf("transmit to LCM: %w", err)
+		}
+		// fast-path: transmit to single address
+		if len(t.messageBuf) == 1 {
+			if _, err := t.conn.WriteTo(t.messageBuf[0].Buffers[0], nil, t.messageBuf[0].Addr); err != nil {
+				return fmt.Errorf("transmit to LCM: %w", err)
+			}
+			continue
+		}
+		// transmit to multiple addresses
+		var transmitCount int
+		for transmitCount < len(t.messageBuf) {
+			n, err := t.conn.WriteBatch(t.messageBuf[transmitCount:], 0)
+			if err != nil {
+				return fmt.Errorf("transmit to LCM: %w", err)
+			}
+			transmitCount += n
+		}
+	}
+}
+
 // Transmit a raw payload.
 //
 // If the provided context has a deadline, it will be propagated to the underlying write operation.
@@ -118,7 +167,6 @@ func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte)
 		t.msg.Data = data
 		t.msg.Params = ""
 	}
-
 	t.msg.Channel = channel
 	t.msg.SequenceNumber = t.sequenceNumber
 	t.sequenceNumber++

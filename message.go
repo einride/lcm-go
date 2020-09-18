@@ -34,7 +34,9 @@ const (
 )
 
 // shortMessageMagic is the uint32 magic number signifying a short LCM message.
-const shortMessageMagic = 0x4c433032
+const (
+	shortMessageMagic uint32 = 0x4c433032
+)
 
 // Message represents an LCM message.
 type Message struct {
