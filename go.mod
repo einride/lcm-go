@@ -8,5 +8,5 @@ require (
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/sys v0.0.0-20200720211630-cb9d2d5c5666 // indirect
 	google.golang.org/protobuf v1.25.0
-	gotest.tools/v3 v3.0.2
+	gotest.tools/v3 v3.0.3
 )
