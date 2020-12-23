@@ -3,8 +3,9 @@ package lz4
 import (
 	"bytes"
 	"fmt"
+	"io"
 
-	"github.com/pierrec/lz4/v3"
+	"github.com/pierrec/lz4/v4"
 )
 
 const maxMessageSize = 65565 * 2 // on the safe side
@@ -24,7 +25,9 @@ func NewCompressor() *Compressor {
 		buffer: bytes.NewBuffer(nil),
 		writer: lz4.NewWriter(nil),
 	}
-	comp.writer.Header.BlockMaxSize = 64 << 10
+	if err := comp.writer.Apply(lz4.BlockSizeOption(lz4.Block64Kb), lz4.DefaultConcurrency); err != nil {
+		return nil
+	}
 	return comp
 }
 
@@ -54,7 +57,7 @@ func NewDecompressor() *Decompressor {
 func (d *Decompressor) Decompress(data []byte) ([]byte, error) {
 	d.reader.Reset(bytes.NewBuffer(data))
 	n, err := d.reader.Read(d.buf)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return nil, fmt.Errorf("lz4 decompress read: %w", err)
 	}
 	return d.buf[:n], nil
