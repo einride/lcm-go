@@ -2,7 +2,9 @@ package lcmlog
 
 import (
 	"bufio"
+	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/einride/lcm-go/pkg/lz4"
@@ -53,4 +55,41 @@ func (s *Scanner) Message() *Message {
 
 func (s *Scanner) Err() error {
 	return s.sc.Err()
+}
+
+func (s *Scanner) SplitWrite(fileName string, splitSizeMByte uint32) error {
+	var logWriter io.WriteCloser
+	var logCounter uint32
+	var bytesWritten uint64
+	for s.sc.Scan() {
+		// Close log if reached max split size
+		if splitSizeMByte > 0 && bytesWritten >= uint64(splitSizeMByte*1000000) {
+			if err := logWriter.Close(); err != nil {
+				return fmt.Errorf("close log writer: %w", err)
+			}
+			bytesWritten = 0
+		}
+		// Open new log
+		if bytesWritten == 0 {
+			out, err := os.Create(fileName + fmt.Sprintf(".%d", logCounter))
+			if err != nil {
+				return fmt.Errorf("init log writer: %w", err)
+			}
+			logWriter = out
+			logCounter++
+		}
+		// Write data to the open log
+		n, err := logWriter.Write(s.sc.Bytes())
+		if err != nil {
+			return fmt.Errorf("write to log file: %w", err)
+		}
+		bytesWritten += uint64(n)
+	}
+	// Close the remaining (last) log
+	if bytesWritten != 0 {
+		if err := logWriter.Close(); err != nil {
+			return fmt.Errorf("close log writer: %w", err)
+		}
+	}
+	return nil
 }
