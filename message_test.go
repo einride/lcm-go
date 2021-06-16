@@ -57,16 +57,16 @@ func TestMessage_MarshalUnmarshal(t *testing.T) {
 	} {
 		tt := tt
 		t.Run(tt.msg, func(t *testing.T) {
-			t.Run("marshal", func(t *testing.T) {
+			t.Run("Marshal", func(t *testing.T) {
 				var data [lengthOfLargestUDPMessage]byte
-				n, err := tt.message.marshal(data[:])
+				n, err := tt.message.Marshal(data[:])
 				assert.NilError(t, err)
 				assert.Equal(t, len(tt.data), n)
 				assert.DeepEqual(t, tt.data, data[:n])
 			})
-			t.Run("unmarshal", func(t *testing.T) {
+			t.Run("Unmarshal", func(t *testing.T) {
 				var msg Message
-				assert.NilError(t, msg.unmarshal(tt.data))
+				assert.NilError(t, msg.Unmarshal(tt.data))
 				assert.DeepEqual(t, tt.message, msg)
 			})
 		})
@@ -109,7 +109,7 @@ func TestMessage_Unmarshal_Errors(t *testing.T) {
 		tt := tt
 		t.Run(tt.msg, func(t *testing.T) {
 			var msg Message
-			err := msg.unmarshal(tt.data)
+			err := msg.Unmarshal(tt.data)
 			assert.Assert(t, err != nil)
 			assert.Equal(t, tt.err, err.Error())
 		})
