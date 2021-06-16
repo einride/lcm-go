@@ -44,8 +44,8 @@ type Message struct {
 	Data           []byte
 }
 
-// Marshal an LCM message onto the given byte slice. Returns the number of bytes copied, or an error.
-func (m *Message) Marshal(b []byte) (int, error) {
+// marshal an LCM message.
+func (m *Message) marshal(b []byte) (int, error) {
 	rawChannel := m.Channel
 	if m.Params != "" {
 		rawChannel += "?" + m.Params
@@ -66,8 +66,16 @@ func (m *Message) Marshal(b []byte) (int, error) {
 	return lengthOfHeaderMagic + lengthOfSequenceNumber + payloadSize, nil
 }
 
-// Unmarshal the given byte slice onto the called LCM message.
-func (m *Message) Unmarshal(data []byte) error {
+func split(s string, c byte) (string, string) {
+	i := strings.IndexByte(s, c)
+	if i < 0 {
+		return s, ""
+	}
+	return s[:i], s[i+1:]
+}
+
+// unmarshal an LCM message.
+func (m *Message) unmarshal(data []byte) error {
 	if len(data) < lengthOfSmallestMessage {
 		return fmt.Errorf("insufficient data: %v bytes", len(data))
 	}
@@ -85,12 +93,4 @@ func (m *Message) Unmarshal(data []byte) error {
 	m.SequenceNumber = sequence
 	m.Data = data[indexOfPayload:]
 	return nil
-}
-
-func split(s string, c byte) (string, string) {
-	i := strings.IndexByte(s, c)
-	if i < 0 {
-		return s, ""
-	}
-	return s[:i], s[i+1:]
 }

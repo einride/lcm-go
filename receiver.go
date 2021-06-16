@@ -141,7 +141,7 @@ func (r *Receiver) Receive(ctx context.Context) error {
 	r.srcAddr = cm.Src
 	r.dstAddr = cm.Dst
 	r.ifIndex = cm.IfIndex
-	if err := r.currMessage.Unmarshal(curr.Buffers[0][:curr.N]); err != nil {
+	if err := r.currMessage.unmarshal(curr.Buffers[0][:curr.N]); err != nil {
 		return fmt.Errorf("receive on LCM: %w", err)
 	}
 	params := strings.Split(r.currMessage.Params, "&")

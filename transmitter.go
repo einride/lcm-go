@@ -122,7 +122,7 @@ func (t *Transmitter) Transmit(ctx context.Context, channel string, data []byte)
 	t.msg.Channel = channel
 	t.msg.SequenceNumber = t.sequenceNumber
 	t.sequenceNumber++
-	n, err := t.msg.Marshal(t.payloadBuf[:])
+	n, err := t.msg.marshal(t.payloadBuf[:])
 	if err != nil {
 		return fmt.Errorf("transmit to LCM: %w", err)
 	}
