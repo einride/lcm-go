@@ -36,7 +36,7 @@ func TestScanner_Scan_Testdata(t *testing.T) {
 func TestMarshalling(t *testing.T) {
 	m := Message{EventNumber: 1, Timestamp: time.Unix(300, 10e6), Channel: "test", Data: []byte("test_data")}
 	var newM Message
-	newM.unmarshalBinary(m.marshalBinary())
+	newM.UnmarshalBinary(m.MarshalBinary())
 	assert.DeepEqual(t, m.Timestamp, newM.Timestamp)
 	assert.DeepEqual(t, m, newM)
 }

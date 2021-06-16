@@ -95,15 +95,17 @@ type Message struct {
 	Data        []byte
 }
 
-func split(s string, c string) (string, string) {
-	i := strings.Index(s, c)
-	if i < 0 {
-		return s, ""
+func (m *Message) WriteTo(w io.Writer) (int64, error) {
+	n, err := w.Write(m.MarshalBinary())
+	if err != nil {
+		return 0, fmt.Errorf("new log file: %w", err)
 	}
-	return s[:i], s[i+len(c):]
+	return int64(n), err
 }
 
-func (m *Message) unmarshalBinary(b []byte) {
+// UnmarshalBinary will convert the given byte slice onto the called message. This function assumes that the byte
+// slice given is marshalled message in the correct format.
+func (m *Message) UnmarshalBinary(b []byte) {
 	m.EventNumber = binary.BigEndian.Uint64(b[indexOfEventNumber:endOfEventNumber])
 	timestampMicros := binary.BigEndian.Uint64(b[indexOfTimestamp:endOfTimestamp])
 	m.Timestamp = time.Unix(0, (time.Duration(timestampMicros) * time.Microsecond).Nanoseconds())
@@ -116,7 +118,9 @@ func (m *Message) unmarshalBinary(b []byte) {
 	m.Data = b[indexOfData:endOfData]
 }
 
-func (m *Message) marshalBinary() []byte {
+// MarshalBinary will output the message this function is called on to a byte slice.
+// The inverse of this function is UnmarshalBinary.
+func (m *Message) MarshalBinary() []byte {
 	endofChannel := endOfDataLength + uint32(len(m.Channel))
 	endOfData := endofChannel + uint32(len(m.Data))
 	b := make([]byte, endOfDataLength+len(m.Channel)+len(m.Data))
@@ -129,6 +133,14 @@ func (m *Message) marshalBinary() []byte {
 	copy(b[endOfDataLength:endofChannel], m.Channel)
 	copy(b[endofChannel:endOfData], m.Data)
 	return b
+}
+
+func split(s string, c string) (string, string) {
+	i := strings.Index(s, c)
+	if i < 0 {
+		return s, ""
+	}
+	return s[:i], s[i+len(c):]
 }
 
 func scanLogMessages(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -155,12 +167,4 @@ func scanLogMessages(data []byte, atEOF bool) (advance int, token []byte, err er
 		return 0, nil, nil
 	}
 	return messageLength, data[:messageLength], nil
-}
-
-func (m *Message) WriteTo(w io.Writer) (int64, error) {
-	n, err := w.Write(m.marshalBinary())
-	if err != nil {
-		return 0, fmt.Errorf("new log file: %w", err)
-	}
-	return int64(n), err
 }
