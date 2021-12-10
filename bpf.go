@@ -34,7 +34,8 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 	)
 	program := make([]bpf.Instruction, 0, estimatedInstructionsPerChannel*len(channels))
 	// accept only short messages
-	program = append(program,
+	program = append(
+		program,
 		bpf.LoadAbsolute{Off: offsetHeaderMagic, Size: 4},
 		bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: shortMessageMagic, SkipTrue: jumpRejectPlaceholder},
 	)
@@ -43,7 +44,8 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 		remaining := []byte(channel)
 		var i int
 		for ; len(remaining) >= 4; i += 4 {
-			program = append(program,
+			program = append(
+				program,
 				bpf.LoadAbsolute{Off: offsetChannel + uint32(i), Size: 4},
 				bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: binary.BigEndian.Uint32(remaining), SkipTrue: jumpNextChannelPlaceholder},
 			)
@@ -67,15 +69,17 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 			// will be rejected too. But why would you do that?
 			program = append(program, bpf.ALUOpConstant{Op: bpf.ALUOpShiftRight, Val: 0x8})
 		}
-		program = append(program,
+		program = append(
+			program,
 			// Channel match, accept package.
 			bpf.JumpIf{Cond: bpf.JumpEqual, Val: val, SkipTrue: jumpAcceptPlaceholder},
 			// Or if there is a query parameter accept the message as is.
 			bpf.JumpIf{Cond: bpf.JumpEqual, Val: val | '?', SkipTrue: jumpAcceptPlaceholder},
 		)
 	}
-	program = append(program,
-		bpf.RetConstant{Val: 0},                         // No channel match, reject package.
+	program = append(
+		program,
+		bpf.RetConstant{Val: 0}, // No channel match, reject package.
 		bpf.RetConstant{Val: lengthOfLargestUDPMessage}, // Accept instruction
 	)
 	// Start with next channel pointing to the rejection we just added

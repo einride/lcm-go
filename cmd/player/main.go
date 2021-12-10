@@ -1,3 +1,4 @@
+// nolint: gocritic
 package main
 
 import (
@@ -20,7 +21,6 @@ func main() {
 	cmdDur := flag.Duration("maxtime", time.Hour, "filters out messages with longer time spans")
 	cmdSpeedFactor := flag.Float64("speed", 1, "speed factor to play speed")
 	flag.Parse()
-
 	if len(flag.Args()) < 1 {
 		log.Println("too few arguments")
 		return
@@ -35,7 +35,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
-
 	udpAddr, err := net.ResolveUDPAddr("udp", *cmdAddr)
 	if err != nil {
 		log.Fatal(err)
@@ -45,7 +44,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	logPlayer := player.NewPlayer(f, *cmdDur, *cmdSpeedFactor, transmitter)
 	length, noMessages, err := logPlayer.GetLength()
 	if err != nil {
@@ -54,7 +52,6 @@ func main() {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
 	defer stop()
 	log.Printf("log length is: %s", length)
-
 	skippedMessages, err := logPlayer.Play(ctx, func(messageNumber int) {
 		fmt.Printf("\r%s", strings.Repeat(" ", 35))
 		fmt.Printf("\rDone... %d / %d packets", messageNumber, noMessages)
@@ -62,5 +59,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	println("\nfinished, skipped messages", skippedMessages)
+	fmt.Println("\nfinished, skipped messages", skippedMessages)
 }

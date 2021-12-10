@@ -2,6 +2,7 @@ package lz4
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 
@@ -57,7 +58,7 @@ func NewDecompressor() *Decompressor {
 func (d *Decompressor) Decompress(data []byte) ([]byte, error) {
 	d.reader.Reset(bytes.NewBuffer(data))
 	n, err := d.reader.Read(d.buf)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("lz4 decompress read: %w", err)
 	}
 	return d.buf[:n], nil
