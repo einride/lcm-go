@@ -6,7 +6,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/einride/lcm-go"
+	"go.einride.tech/lcm"
 	"golang.org/x/net/nettest"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/einride/lcm-go"
-	"github.com/einride/lcm-go/pkg/player"
+	"go.einride.tech/lcm"
+	"go.einride.tech/lcm/pkg/player"
 )
 
 func main() {

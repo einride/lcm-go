@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/einride/lcm-go/pkg/lz4"
+	"go.einride.tech/lcm/pkg/lz4"
 	"golang.org/x/net/nettest"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/testing/protocmp"

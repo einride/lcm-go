@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/einride/lcm-go/pkg/lz4"
+	"go.einride.tech/lcm/pkg/lz4"
 	"golang.org/x/net/bpf"
 	"golang.org/x/net/ipv4"
 	"google.golang.org/protobuf/proto"
