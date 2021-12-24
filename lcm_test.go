@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"go.einride.tech/lcm/pkg/lz4"
+	"go.einride.tech/lcm/compression/lcmlz4"
 	"golang.org/x/net/nettest"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/testing/protocmp"
@@ -38,7 +38,7 @@ func TestLCM_OneTransmitter_OneReceiver(t *testing.T) {
 		ctx,
 		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip, Port: freePort}),
-		WithTransmitCompression(lz4.NewCompressor(), "first"),
+		WithTransmitCompression(lcmlz4.NewCompressor(), "first"),
 	)
 	assert.NilError(t, err)
 	defer func() {
@@ -224,7 +224,7 @@ func TestLCM_OneTransmitter_OneReceiver_ManyCompressed(t *testing.T) {
 		ctx,
 		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip, Port: freePort}),
-		WithTransmitCompression(lz4.NewCompressor(), "first"),
+		WithTransmitCompression(lcmlz4.NewCompressor(), "first"),
 	)
 	assert.NilError(t, err)
 	defer func() {
@@ -275,7 +275,7 @@ func TestLCM_ProtoTransmitter_ProtoReceiver(t *testing.T) {
 		ctx,
 		WithTransmitInterface(ifi.Name),
 		WithTransmitAddress(&net.UDPAddr{IP: ip, Port: freePort}),
-		WithTransmitCompressionProto(lz4.NewCompressor(), &timestamppb.Timestamp{}, &durationpb.Duration{}),
+		WithTransmitCompressionProto(lcmlz4.NewCompressor(), &timestamppb.Timestamp{}, &durationpb.Duration{}),
 	)
 	assert.NilError(t, err)
 	defer func() {

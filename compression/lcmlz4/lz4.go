@@ -1,4 +1,4 @@
-package lz4
+package lcmlz4
 
 import (
 	"bytes"

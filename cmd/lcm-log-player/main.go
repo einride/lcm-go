@@ -1,4 +1,4 @@
-// nolint: gocritic
+//nolint: gocritic
 package main
 
 import (
@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"go.einride.tech/lcm"
-	"go.einride.tech/lcm/pkg/player"
+	"go.einride.tech/lcm/lcmlogplayer"
 )
 
 func main() {
@@ -44,7 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	logPlayer := player.NewPlayer(f, *cmdDur, *cmdSpeedFactor, transmitter)
+	logPlayer := lcmlogplayer.New(f, *cmdDur, *cmdSpeedFactor, transmitter)
 	length, noMessages, err := logPlayer.GetLength()
 	if err != nil {
 		log.Fatal(err)
