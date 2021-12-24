@@ -22,6 +22,7 @@ type Transmitter struct {
 	msg            Message
 }
 
+// Compressor is an interface for an LCM message compressor.
 type Compressor interface {
 	Compress(data []byte) ([]byte, error)
 	Name() string

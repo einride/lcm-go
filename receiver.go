@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// Decompressor is an interface for an LCM message decompressor.
 type Decompressor interface {
 	Decompress(data []byte) ([]byte, error)
 }
