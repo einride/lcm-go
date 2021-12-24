@@ -1,4 +1,5 @@
 //go:build mage
+// +build mage
 
 package main
 
@@ -6,36 +7,49 @@ import (
 	"github.com/magefile/mage/mg"
 
 	// mage:import
-	_ "github.com/einride/mage-tools/maketargets"
+	_ "go.einride.tech/mage-tools/mgmake"
+
 	// mage:import
-	"github.com/einride/mage-tools/tools/common"
+	"go.einride.tech/mage-tools/targets/mgcommitlint"
+
 	// mage:import
-	"github.com/einride/mage-tools/tools/gitverifynodiff"
+	"go.einride.tech/mage-tools/targets/mggo"
+
 	// mage:import
-	"github.com/einride/mage-tools/tools/goreview"
+	"go.einride.tech/mage-tools/targets/mggolangcilint"
+
 	// mage:import
-	"github.com/einride/mage-tools/tools/golangcilint"
+	"go.einride.tech/mage-tools/targets/mggoreview"
+
 	// mage:import
-	"github.com/einride/mage-tools/tools/commitlint"
+	"go.einride.tech/mage-tools/targets/mgmockgen"
+
 	// mage:import
-	"github.com/einride/mage-tools/tools/prettier"
+	"go.einride.tech/mage-tools/targets/mgprettier"
+
+	// mage:import
+	"go.einride.tech/mage-tools/targets/mggitverifynodiff"
 )
 
 func All() {
 	mg.Deps(
-		mg.F(common.MockgenGenerate, "mockplayer", "test/mocks/player/service.go", "github.com/einride/lcm-go/pkg/player", "Transmitter"),
+		mg.F(
+			mgmockgen.MockgenGenerate,
+			"mockplayer",
+			"test/mocks/player/service.go",
+			"github.com/einride/lcm-go/pkg/player",
+			"Transmitter",
+		),
+		mg.F(mgcommitlint.Commitlint, "master"),
+		mgprettier.FormatMarkdown,
 	)
 	mg.Deps(
-		mg.F(commitlint.Commitlint, "master"),
-		golangcilint.GolangciLint,
-		goreview.Goreview,
-		common.GoTest,
-	)
-	mg.Deps(
-		common.GoModTidy,
-		prettier.FormatMarkdown,
+		mggolangcilint.GolangciLint,
+		mggoreview.Goreview,
+		mggo.GoTest,
 	)
 	mg.SerialDeps(
-		gitverifynodiff.GitVerifyNoDiff,
+		mggo.GoModTidy,
+		mggitverifynodiff.GitVerifyNoDiff,
 	)
 }
