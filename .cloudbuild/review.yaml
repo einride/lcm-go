@@ -1,3 +1,0 @@
-steps:
-  - name: eu.gcr.io/einride-build/cloud-builder-core:1.17
-    args: ["make"]

@@ -29,6 +29,9 @@ import (
 
 	// mage:import
 	"go.einride.tech/mage-tools/targets/mggitverifynodiff"
+
+	// mage:import
+	_ "go.einride.tech/mage-tools/targets/mgsemanticrelease"
 )
 
 func All() {
