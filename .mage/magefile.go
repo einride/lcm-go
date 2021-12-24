@@ -37,7 +37,7 @@ func All() {
 			mgmockgen.MockgenGenerate,
 			"mockplayer",
 			"test/mocks/player/service.go",
-			"github.com/einride/lcm-go/pkg/player",
+			"go.einride.tech/lcm/pkg/player",
 			"Transmitter",
 		),
 		mg.F(mgcommitlint.Commitlint, "master"),

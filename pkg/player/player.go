@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/einride/lcm-go/pkg/lcmlog"
+	"go.einride.tech/lcm/pkg/lcmlog"
 )
 
 type Transmitter interface {

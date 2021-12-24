@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/einride/lcm-go/pkg/lz4"
+	"go.einride.tech/lcm/pkg/lz4"
 )
 
 type Decompressor interface {

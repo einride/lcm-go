@@ -7,8 +7,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/einride/lcm-go"
-	"github.com/einride/lcm-go/pkg/lz4"
+	"go.einride.tech/lcm"
+	"go.einride.tech/lcm/pkg/lz4"
 	"golang.org/x/net/nettest"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

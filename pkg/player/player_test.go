@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	mockplayer "github.com/einride/lcm-go/test/mocks/player"
 	"github.com/golang/mock/gomock"
+	mockplayer "go.einride.tech/lcm/test/mocks/player"
 	"gotest.tools/v3/assert"
 )
 

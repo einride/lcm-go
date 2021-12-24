@@ -1,4 +1,4 @@
-module github.com/einride/lcm-go
+module go.einride.tech/lcm
 
 go 1.16
 
