@@ -38,9 +38,9 @@ func All() {
 	mg.Deps(
 		mg.F(
 			mgmockgen.MockgenGenerate,
-			"mockplayer",
-			"test/mocks/player/service.go",
-			"go.einride.tech/lcm/pkg/player",
+			"mocklcmlogplayer",
+			"test/mocks/lcmlogplayer/mocks.go",
+			"go.einride.tech/lcm/lcmlogplayer",
 			"Transmitter",
 		),
 		mg.F(mgcommitlint.Commitlint, "master"),

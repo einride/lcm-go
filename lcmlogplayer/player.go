@@ -1,4 +1,4 @@
-package player
+package lcmlogplayer
 
 import (
 	"context"
@@ -6,27 +6,27 @@ import (
 	"io"
 	"time"
 
-	"go.einride.tech/lcm/pkg/lcmlog"
+	"go.einride.tech/lcm/lcmlog"
 )
 
 type Transmitter interface {
 	Transmit(ctx context.Context, channel string, data []byte) error
 }
 
-type Player struct {
+type LogPlayer struct {
 	f           io.ReadSeekCloser
 	dur         time.Duration
 	speedFactor float64
 	transmitter Transmitter
 }
 
-func NewPlayer(
+func New(
 	file io.ReadSeekCloser,
 	dur time.Duration,
 	speedFactor float64,
 	transmitter Transmitter,
-) *Player {
-	return &Player{
+) *LogPlayer {
+	return &LogPlayer{
 		f:           file,
 		dur:         dur,
 		speedFactor: speedFactor,
@@ -34,7 +34,7 @@ func NewPlayer(
 	}
 }
 
-func (p *Player) Play(ctx context.Context, progressCallback func(messageNumber int)) (int, error) {
+func (p *LogPlayer) Play(ctx context.Context, progressCallback func(messageNumber int)) (int, error) {
 	scanner := lcmlog.NewScanner(p.f)
 	var previousMsg lcmlog.Message
 	firstMessage := true
@@ -78,7 +78,7 @@ func (p *Player) Play(ctx context.Context, progressCallback func(messageNumber i
 	return skippedMessages, nil
 }
 
-func (p *Player) resetFilePosition() error {
+func (p *LogPlayer) resetFilePosition() error {
 	if _, err := p.f.Seek(0, 0); err != nil {
 		return fmt.Errorf("reset file position: %w", err)
 	}
@@ -86,7 +86,7 @@ func (p *Player) resetFilePosition() error {
 }
 
 // GetLength returns the duration of the log and number of messages.
-func (p *Player) GetLength() (time.Duration, int, error) {
+func (p *LogPlayer) GetLength() (time.Duration, int, error) {
 	if err := p.resetFilePosition(); err != nil {
 		return 0, 0, fmt.Errorf("get length: %w", err)
 	}

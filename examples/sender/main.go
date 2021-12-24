@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"go.einride.tech/lcm"
-	"go.einride.tech/lcm/pkg/lz4"
+	"go.einride.tech/lcm/compression/lcmlz4"
 	"golang.org/x/net/nettest"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -22,7 +22,7 @@ func main() {
 	tx, err := lcm.DialMulticastUDP(
 		ctx,
 		lcm.WithTransmitInterface(ifi.Name),
-		lcm.WithTransmitCompressionProto(lz4.NewCompressor(), &timestamppb.Timestamp{}),
+		lcm.WithTransmitCompressionProto(lcmlz4.NewCompressor(), &timestamppb.Timestamp{}),
 	)
 	if err != nil {
 		log.Fatalf("failed to start: %v", err)

@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"go.einride.tech/lcm/pkg/lz4"
+	"go.einride.tech/lcm/compression/lcmlz4"
 	"golang.org/x/net/bpf"
 	"golang.org/x/net/ipv4"
 	"google.golang.org/protobuf/proto"
@@ -41,7 +41,7 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 		conn:          conn,
 		opts:          opts,
 		protoMessages: make(map[string]proto.Message),
-		decompressors: map[string]Decompressor{"z=lz4": lz4.NewDecompressor()},
+		decompressors: map[string]Decompressor{"z=lz4": lcmlz4.NewDecompressor()},
 	}
 	if opts.interfaceName != "" {
 		ifi, err := net.InterfaceByName(opts.interfaceName)

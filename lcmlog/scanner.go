@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"go.einride.tech/lcm/pkg/lz4"
+	"go.einride.tech/lcm/compression/lcmlz4"
 )
 
 type Decompressor interface {
@@ -23,7 +23,7 @@ func NewScanner(r io.Reader) *Scanner {
 	sc.Split(scanLogMessages)
 	return &Scanner{
 		sc:            sc,
-		decompressors: map[string]Decompressor{"z=lz4": lz4.NewDecompressor()},
+		decompressors: map[string]Decompressor{"z=lz4": lcmlz4.NewDecompressor()},
 	}
 }
 
