@@ -7,37 +7,30 @@ import (
 	"github.com/magefile/mage/mg"
 
 	// mage:import
-	_ "go.einride.tech/mage-tools/mgmake"
+	"go.einride.tech/mage-tools/targets/mgmarkdownfmt"
 
 	// mage:import
-	"go.einride.tech/mage-tools/targets/mgcommitlint"
+	"go.einride.tech/mage-tools/targets/mgcocogitto"
 
 	// mage:import
 	"go.einride.tech/mage-tools/targets/mggo"
+
+	// mage:import
+	"go.einride.tech/mage-tools/targets/mggitverifynodiff"
 
 	// mage:import
 	"go.einride.tech/mage-tools/targets/mggolangcilint"
 
 	// mage:import
 	"go.einride.tech/mage-tools/targets/mggoreview"
-
-	// mage:import
-	"go.einride.tech/mage-tools/targets/mgprettier"
-
-	// mage:import
-	"go.einride.tech/mage-tools/targets/mggitverifynodiff"
-
-	// mage:import
-	_ "go.einride.tech/mage-tools/targets/mgsemanticrelease"
 )
 
 func All() {
 	mg.Deps(
-		mg.F(mgcommitlint.Commitlint, "master"),
-		mgprettier.FormatMarkdown,
+		mgcocogitto.CogCheck,
 		mggolangcilint.GolangciLint,
 		mggoreview.Goreview,
-		mggo.GoTest,
+		mgmarkdownfmt.FormatMarkdown,
 	)
 	mg.SerialDeps(
 		mggo.GoModTidy,
