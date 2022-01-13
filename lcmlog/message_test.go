@@ -8,7 +8,7 @@ import (
 )
 
 func TestMessage_Marshaling(t *testing.T) {
-	// Marshalling and Unmarshalling "params" isn't supported. Why?
+	// Marshaling and Unmarshalling "params" isn't supported. Why?
 	originalMsg := Message{
 		EventNumber: 1,
 		Timestamp:   time.Unix(300, 10e6),

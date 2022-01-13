@@ -104,7 +104,7 @@ func (m *Message) WriteTo(w io.Writer) (int64, error) {
 }
 
 // UnmarshalBinary will convert the given byte slice onto the called message. This function assumes that the byte
-// slice given is marshalled message in the correct format.
+// slice given is marshaled message in the correct format.
 func (m *Message) UnmarshalBinary(b []byte) {
 	m.EventNumber = binary.BigEndian.Uint64(b[indexOfEventNumber:endOfEventNumber])
 	timestampMicros := binary.BigEndian.Uint64(b[indexOfTimestamp:endOfTimestamp])
@@ -135,7 +135,7 @@ func (m *Message) MarshalBinary() []byte {
 	return b
 }
 
-func split(s string, c string) (string, string) {
+func split(s, c string) (string, string) {
 	i := strings.Index(s, c)
 	if i < 0 {
 		return s, ""
