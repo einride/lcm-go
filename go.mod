@@ -10,3 +10,6 @@ require (
 	google.golang.org/protobuf v1.28.0
 	gotest.tools/v3 v3.2.0
 )
+
+// Version has been removed from GitHub
+retract v1.19.0
