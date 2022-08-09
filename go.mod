@@ -12,4 +12,8 @@ require (
 )
 
 // Version has been removed from GitHub
-retract v1.19.0
+retract (
+	v1.20.0
+	v1.19.0
+	v1.0.0
+)
