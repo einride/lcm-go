@@ -11,30 +11,30 @@ import (
 
 // from: https://lcm-proj.github.io/log_file_format.html
 //
-// Event Encoding
+// # Event Encoding
 //
 // Each event is encoded as a binary structure consisting of a header, followed by the channel and the data.
 //
 // The header is 28 bytes and has the following format:
 //
-//  0      7 8     15 16    23 24    31
-//  +--------+--------+--------+--------+
-//  |   LCM Sync Word                   |
-//  +--------+--------+--------+--------+
-//  |   Event Number (upper 32 bits)    |
-//  +--------+--------+--------+--------+
-//  |   Event Number (lower 32 bits)    |
-//  +--------+--------+--------+--------+
-//  |   Timestamp (upper 32 bits)       |
-//  +--------+--------+--------+--------+
-//  |   Timestamp (lower 32 bits)       |
-//  +--------+--------+--------+--------+
-//  |   Channel Length                  |
-//  +--------+--------+--------+--------+
-//  |   Data Length                     |
-//  +--------+--------+--------+--------+
+//	0      7 8     15 16    23 24    31
+//	+--------+--------+--------+--------+
+//	|   LCM Sync Word                   |
+//	+--------+--------+--------+--------+
+//	|   Event Number (upper 32 bits)    |
+//	+--------+--------+--------+--------+
+//	|   Event Number (lower 32 bits)    |
+//	+--------+--------+--------+--------+
+//	|   Timestamp (upper 32 bits)       |
+//	+--------+--------+--------+--------+
+//	|   Timestamp (lower 32 bits)       |
+//	+--------+--------+--------+--------+
+//	|   Channel Length                  |
+//	+--------+--------+--------+--------+
+//	|   Data Length                     |
+//	+--------+--------+--------+--------+
 //
-// LCM Sync Word is an unsigned 32-bit integer with value 0xEDA1DA01
+// # LCM Sync Word is an unsigned 32-bit integer with value 0xEDA1DA01
 //
 // Event Number and Timestamp fields of the header are as described above.
 //
