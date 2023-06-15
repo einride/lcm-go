@@ -3,7 +3,7 @@ module go.einride.tech/lcm
 go 1.16
 
 require (
-	github.com/pierrec/lz4/v4 v4.1.17
+	github.com/pierrec/lz4/v4 v4.1.18
 	golang.org/x/net v0.11.0
 	golang.org/x/sync v0.2.0
 	google.golang.org/protobuf v1.30.0
