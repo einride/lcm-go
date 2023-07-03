@@ -4,14 +4,23 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
+      day: "monday"
+      time: "05:12"
+      timezone: "Europe/Stockholm"
 
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
+      day: "monday"
+      time: "05:12"
+      timezone: "Europe/Stockholm"
 
   - package-ecosystem: gomod
     directory: .sage
     schedule:
       interval: weekly
+      day: "monday"
+      time: "05:12"
+      timezone: "Europe/Stockholm"
