@@ -1,0 +1,9 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: lcm
+  description: Lightweight Communications and Marshalling
+spec:
+  owner: team-ads-platform
+  domain: internal-developer-platform

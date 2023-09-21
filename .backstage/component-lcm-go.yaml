@@ -1,0 +1,11 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lcm-go
+  description: Performant, native Go LCM implementation with integrated support for protobuf and compression.
+spec:
+  type: library
+  lifecycle: production
+  owner: team-ads-platform
+  system: lcm
