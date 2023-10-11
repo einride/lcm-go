@@ -28,11 +28,11 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 	// wildcard address prefix for all administratively-scoped (local) multicast addresses
 	packetConn, err := listenConfig.ListenPacket(ctx, "udp4", fmt.Sprintf("239.0.0.0:%d", opts.port))
 	if err != nil {
-		return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
+		return nil, fmt.Errorf("opening packet listener: %w", err)
 	}
 	udpConn := packetConn.(*net.UDPConn)
 	if err := udpConn.SetReadBuffer(opts.bufferSizeBytes); err != nil {
-		return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
+		return nil, fmt.Errorf("setting read buffer: %w", err)
 	}
 	conn := ipv4.NewPacketConn(udpConn)
 	if len(opts.ips) == 0 {
@@ -47,13 +47,13 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 	if opts.interfaceName != "" {
 		ifi, err := net.InterfaceByName(opts.interfaceName)
 		if err != nil {
-			return nil, fmt.Errorf("listen LCM UDP multicast: interface %s: %w", opts.interfaceName, err)
+			return nil, fmt.Errorf("getting %s interface by name: %w", opts.interfaceName, err)
 		}
 		if ifi.Flags&net.FlagMulticast == 0 {
-			return nil, fmt.Errorf("listen LCM UDP multicast: interface %s: not a multicast interface", ifi.Name)
+			return nil, fmt.Errorf("interface %s is not a multicast interface", ifi.Name)
 		}
 		if ifi.Flags&net.FlagUp == 0 {
-			return nil, fmt.Errorf("listen LCM UDP multicast: interface %s: not up", ifi.Name)
+			return nil, fmt.Errorf("interface %s is not up", ifi.Name)
 		}
 		rx.ifi = ifi
 	}
@@ -63,21 +63,21 @@ func ListenMulticastUDP(ctx context.Context, receiverOpts ...ReceiverOption) (*R
 		// Note that the service port for transport layer protocol does not matter with this operation as joining
 		// groups affects only network and link layer protocols, such as IPv4 and Ethernet.
 		if err := conn.JoinGroup(rx.ifi, &net.UDPAddr{IP: ip}); err != nil {
-			return nil, fmt.Errorf("listen LCM UDP multicast: IP %v: %w", ip, err)
+			return nil, fmt.Errorf("joining multicast group: IP %v: %w", ip, err)
 		}
 	}
 	// contralFlags are the control flags used to configure the LCM connection.
 	const controlFlags = ipv4.FlagInterface | ipv4.FlagDst | ipv4.FlagSrc
 	if err := conn.SetControlMessage(controlFlags, true); err != nil {
-		return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
+		return nil, fmt.Errorf("setting control message: %w", err)
 	}
 	if runtime.GOOS == "linux" && len(opts.bpfProgram) > 0 && len(opts.bpfProgram) < 256 {
 		rawBPFInstructions, err := bpf.Assemble(opts.bpfProgram)
 		if err != nil {
-			return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
+			return nil, fmt.Errorf("assembling bpf: %w", err)
 		}
 		if err := conn.SetBPF(rawBPFInstructions); err != nil {
-			return nil, fmt.Errorf("listen LCM UDP multicast: %w", err)
+			return nil, fmt.Errorf("setting bpf: %w", err)
 		}
 	}
 	for _, msg := range opts.protos {
