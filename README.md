@@ -1,15 +1,14 @@
-LCM Go
-======
+# LCM Go
 
-Performant, native Go [LCM](https://lcm-proj.github.io/) implementation with integrated support for [protobuf](https://developers.google.com/protocol-buffers) and compression.
+Performant, native Go [LCM](https://lcm-proj.github.io/) implementation with
+integrated support for
+[protobuf](https://developers.google.com/protocol-buffers) and compression.
 
-Installation
-------------
+## Installation
 
 `go get go.einride.tech/lcm`
 
-Usage
------
+## Usage
 
 ### Receiver
 
@@ -43,27 +42,31 @@ Usage
 	}
 ```
 
-Notable features
-----------------
+## Notable features
 
 ### Protobuf messages
 
-Protobuf messages can be transmitted and received, with encoding and decoding handled by the LCM stack.
+Protobuf messages can be transmitted and received, with encoding and decoding
+handled by the LCM stack.
 
 ### Compression
 
-The library can handle compression and decompression of messages at the channel-level, with the compression scheme indicated by a query-parameter on the channel name (similar to HTTP URLs).
+The library can handle compression and decompression of messages at the
+channel-level, with the compression scheme indicated by a query-parameter on the
+channel name (similar to HTTP URLs).
 
-For example an LZ4 compressed message transmitted over a channel named `google.protobuf.Timestamp?z=lz4` will be automatically decompressed.
+For example an LZ4 compressed message transmitted over a channel named
+`google.protobuf.Timestamp?z=lz4` will be automatically decompressed.
 
 ### BPF filtering
 
-When specifying a set of channels to receive from, the library will attempt to use BPF filters to only receive messages from those channels from the kernel.
+When specifying a set of channels to receive from, the library will attempt to
+use BPF filters to only receive messages from those channels from the kernel.
 
-However, since there is a limit of 255 instructions on BPF filters, if there are too many channels, it will fallback and listening to everything.
+However, since there is a limit of 255 instructions on BPF filters, if there are
+too many channels, it will fallback and listening to everything.
 
-Notable missing features
-------------------------
+## Notable missing features
 
 ### Fragmented messages
 
