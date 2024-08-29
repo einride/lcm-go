@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// indexOfUDPPayload is the first byte index of the payload in a a UDP packet.
+// indexOfUDPPayload is the first byte index of the payload in a UDP packet.
 const (
 	indexOfUDPPayload = 8
 	offsetHeaderMagic = indexOfUDPPayload + indexOfHeaderMagic
@@ -42,11 +42,11 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 	// check for each channel, accept if any matches
 	for _, channel := range channels {
 		remaining := []byte(channel)
-		var i int
+		var i uint32
 		for ; len(remaining) >= 4; i += 4 {
 			program = append(
 				program,
-				bpf.LoadAbsolute{Off: offsetChannel + uint32(i), Size: 4},
+				bpf.LoadAbsolute{Off: offsetChannel + i, Size: 4},
 				bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: binary.BigEndian.Uint32(remaining), SkipTrue: jumpNextChannelPlaceholder},
 			)
 			remaining = remaining[4:]
@@ -63,7 +63,7 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 		case 3:
 			val, size = uint32(remaining[2])<<8|uint32(remaining[1])<<16|uint32(remaining[0])<<24, 4
 		}
-		program = append(program, bpf.LoadAbsolute{Off: offsetChannel + uint32(i), Size: size})
+		program = append(program, bpf.LoadAbsolute{Off: offsetChannel + i, Size: size})
 		if len(remaining) == 2 {
 			// When this happens we actually read 1 byte into the payload. So a packet with no payload
 			// will be rejected too. But why would you do that?
@@ -83,14 +83,16 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 		bpf.RetConstant{Val: lengthOfLargestUDPMessage}, // Accept instruction
 	)
 	// Start with next channel pointing to the rejection we just added
+	//nolint:gosec // overflow shouldn't be an issue here.
+	progLen := uint8(len(program))
 	rewrite := map[uint8]uint8{
-		jumpNextChannelPlaceholder: uint8(len(program)) - 2,
-		jumpRejectPlaceholder:      uint8(len(program)) - 2,
-		jumpAcceptPlaceholder:      uint8(len(program)) - 1,
+		jumpNextChannelPlaceholder: progLen - 2,
+		jumpRejectPlaceholder:      progLen - 2,
+		jumpAcceptPlaceholder:      progLen - 1,
 	}
 	// Now we back-track through the program to find the placeholders and
 	// rewrite those to a real jump to the next channel (or the reject instruction).
-	for i := uint8(len(program)) - 1; i > 0; i-- {
+	for i := progLen - 1; i > 0; i-- {
 		switch instr := program[i].(type) {
 		case bpf.JumpIf:
 			if offset, ok := rewrite[instr.SkipTrue]; ok {
@@ -100,7 +102,7 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 			}
 		case bpf.LoadAbsolute:
 			// Each channel matching starts with a load of the first byte, uint16 or uint32 in channel.
-			// If it's not, it's not the start of a the channel name
+			// If it's not, it's not the start of the channel name
 			if instr.Off == offsetChannel {
 				rewrite[jumpNextChannelPlaceholder] = i
 			}
