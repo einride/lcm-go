@@ -108,7 +108,6 @@ func (m *Message) WriteTo(w io.Writer) (int64, error) {
 func (m *Message) UnmarshalBinary(b []byte) {
 	m.EventNumber = binary.BigEndian.Uint64(b[indexOfEventNumber:endOfEventNumber])
 	timestampMicros := binary.BigEndian.Uint64(b[indexOfTimestamp:endOfTimestamp])
-	//nolint:gosec // false positive for the integer overflow.
 	m.Timestamp = time.Unix(0, (time.Duration(timestampMicros) * time.Microsecond).Nanoseconds())
 	channelLength := binary.BigEndian.Uint32(b[indexOfChannelLength:endOfChannelLength])
 	dataLength := binary.BigEndian.Uint32(b[indexOfDataLength:endOfDataLength])
@@ -122,18 +121,14 @@ func (m *Message) UnmarshalBinary(b []byte) {
 // MarshalBinary will output the message this function is called on to a byte slice.
 // The inverse of this function is UnmarshalBinary.
 func (m *Message) MarshalBinary() []byte {
-	//nolint:gosec // false positive for integer overflow.
 	endofChannel := endOfDataLength + uint32(len(m.Channel))
-	//nolint:gosec // length won't be negative.
 	endOfData := endofChannel + uint32(len(m.Data))
 	b := make([]byte, endOfDataLength+len(m.Channel)+len(m.Data))
 	binary.BigEndian.PutUint32(b[indexOfSyncWord:endOfSyncWord], syncWord)
 	binary.BigEndian.PutUint64(b[indexOfEventNumber:endOfEventNumber], m.EventNumber)
 	timestampMicros := uint64(time.Duration(m.Timestamp.UnixNano()) / time.Microsecond)
 	binary.BigEndian.PutUint64(b[indexOfTimestamp:endOfTimestamp], timestampMicros)
-	//nolint:gosec // length won't be negative.
 	binary.BigEndian.PutUint32(b[indexOfChannelLength:endOfChannelLength], uint32(len(m.Channel)))
-	//nolint:gosec // length won't be negative.
 	binary.BigEndian.PutUint32(b[indexOfDataLength:endOfDataLength], uint32(len(m.Data)))
 	copy(b[endOfDataLength:endofChannel], m.Channel)
 	copy(b[endofChannel:endOfData], m.Data)
