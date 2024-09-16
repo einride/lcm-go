@@ -244,7 +244,6 @@ func TestLCM_OneTransmitter_OneReceiver_ManyCompressed(t *testing.T) {
 			assert.NilError(t, g.Wait())
 			assert.Equal(t, "first", rx.Message().Channel)
 			assert.DeepEqual(t, []byte(strings.Repeat("foo", i)), rx.Message().Data)
-			//nolint:gosec // i starts at 100 so no risk for underflow.
 			assert.Equal(t, uint32(i-100), rx.Message().SequenceNumber)
 		})
 	}

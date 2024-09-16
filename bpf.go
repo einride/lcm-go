@@ -83,7 +83,6 @@ func shortMessageChannelFilter(channels ...string) []bpf.Instruction {
 		bpf.RetConstant{Val: lengthOfLargestUDPMessage}, // Accept instruction
 	)
 	// Start with next channel pointing to the rejection we just added
-	//nolint:gosec // overflow shouldn't be an issue here.
 	progLen := uint8(len(program))
 	rewrite := map[uint8]uint8{
 		jumpNextChannelPlaceholder: progLen - 2,
