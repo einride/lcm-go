@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/pierrec/lz4/v4 v4.1.21
-	golang.org/x/net v0.29.0
+	golang.org/x/net v0.30.0
 	golang.org/x/sync v0.8.0
 	google.golang.org/protobuf v1.34.2
 	gotest.tools/v3 v3.5.1
