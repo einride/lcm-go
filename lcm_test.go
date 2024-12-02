@@ -231,7 +231,6 @@ func TestLCM_OneTransmitter_OneReceiver_ManyCompressed(t *testing.T) {
 		assert.NilError(t, tx.Close())
 	}()
 	for i := 100; i < 110; i++ {
-		i := i
 		t.Run("receive first", func(t *testing.T) {
 			// when the receiver receives
 			var g errgroup.Group

@@ -83,7 +83,6 @@ func TestShortMessageChannelFilter(t *testing.T) {
 			expected: 0,
 		},
 	} {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			vm, err := bpf.NewVM(tt.program)
 			assert.NilError(t, err)

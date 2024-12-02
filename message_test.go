@@ -55,7 +55,6 @@ func TestMessage_MarshalUnmarshal(t *testing.T) {
 			},
 		},
 	} {
-		tt := tt
 		t.Run(tt.msg, func(t *testing.T) {
 			t.Run("marshal", func(t *testing.T) {
 				var data [lengthOfLargestUDPMessage]byte
@@ -106,7 +105,6 @@ func TestMessage_Unmarshal_Errors(t *testing.T) {
 			err: "wrong header magic: 0xdeadbeef",
 		},
 	} {
-		tt := tt
 		t.Run(tt.msg, func(t *testing.T) {
 			var msg Message
 			err := msg.unmarshal(tt.data)
