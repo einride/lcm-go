@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.23.2
 
 require (
-	github.com/pierrec/lz4/v4 v4.1.21
+	github.com/pierrec/lz4/v4 v4.1.22
 	golang.org/x/net v0.32.0
 	golang.org/x/sync v0.10.0
 	google.golang.org/protobuf v1.35.2
