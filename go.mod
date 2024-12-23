@@ -6,9 +6,9 @@ toolchain go1.23.2
 
 require (
 	github.com/pierrec/lz4/v4 v4.1.22
-	golang.org/x/net v0.32.0
+	golang.org/x/net v0.33.0
 	golang.org/x/sync v0.10.0
-	google.golang.org/protobuf v1.35.2
+	google.golang.org/protobuf v1.36.0
 	gotest.tools/v3 v3.5.1
 )
 
