@@ -6,7 +6,7 @@ toolchain go1.23.2
 
 require (
 	github.com/pierrec/lz4/v4 v4.1.22
-	golang.org/x/net v0.34.0
+	golang.org/x/net v0.35.0
 	golang.org/x/sync v0.11.0
 	google.golang.org/protobuf v1.36.5
 	gotest.tools/v3 v3.5.2
@@ -14,7 +14,7 @@ require (
 
 require (
 	github.com/google/go-cmp v0.6.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 )
 
 // Version has been removed from GitHub
