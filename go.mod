@@ -1,13 +1,13 @@
 module go.einride.tech/lcm
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.1
 
 require (
 	github.com/pierrec/lz4/v4 v4.1.22
 	golang.org/x/net v0.43.0
-	golang.org/x/sync v0.16.0
+	golang.org/x/sync v0.17.0
 	google.golang.org/protobuf v1.36.8
 	gotest.tools/v3 v3.5.2
 )
