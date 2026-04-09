@@ -11,6 +11,10 @@ updates:
 
     cooldown:
       default-days: 7
+      exclude:
+        - github.com/einride/*
+        - github.com/einride-autonomous/*
+        - github.com/einride-labs/*
   - package-ecosystem: gomod
     directory: /
     schedule:
@@ -31,6 +35,10 @@ updates:
       semver-major-days: 30
       semver-minor-days: 7
       semver-patch-days: 3
+      exclude:
+        - github.com/einride/*
+        - github.com/einride-autonomous/*
+        - github.com/einride-labs/*
   - package-ecosystem: gomod
     directory: .sage
     schedule:
@@ -43,3 +51,7 @@ updates:
       semver-major-days: 30
       semver-minor-days: 7
       semver-patch-days: 3
+      exclude:
+        - github.com/einride/*
+        - github.com/einride-autonomous/*
+        - github.com/einride-labs/*
