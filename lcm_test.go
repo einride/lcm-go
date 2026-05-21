@@ -74,6 +74,64 @@ func TestLCM_OneTransmitter_OneReceiver(t *testing.T) {
 	})
 }
 
+func TestLCM_Context(t *testing.T) {
+	t.Run("canceled", func(t *testing.T) {
+		// setup
+		const testTimeout = 1 * time.Second
+		ip := net.IPv4(239, 0, 0, 1)
+		ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+		defer cancel()
+		freePort := getFreePort(t)
+		ifi := getInterface(t)
+		rx, err := ListenMulticastUDP(
+			ctx,
+			WithReceiveInterface(ifi.Name),
+			WithReceivePort(freePort),
+			WithReceiveAddress(ip),
+		)
+		assert.NilError(t, err)
+		defer func() {
+			assert.NilError(t, rx.Close())
+		}()
+		// when the receiver receives
+		var g errgroup.Group
+		g.Go(func() error {
+			return rx.Receive(ctx)
+		})
+		// and when the context is canceled
+		cancel()
+		// then the receiver should receive context canceled error.
+		assert.ErrorIs(t, g.Wait(), context.Canceled)
+	})
+	t.Run("deadline exceeded", func(t *testing.T) {
+		// setup
+		const testTimeout = 200 * time.Millisecond
+		ip := net.IPv4(239, 0, 0, 1)
+		ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+		defer cancel()
+		freePort := getFreePort(t)
+		ifi := getInterface(t)
+		rx, err := ListenMulticastUDP(
+			ctx,
+			WithReceiveInterface(ifi.Name),
+			WithReceivePort(freePort),
+			WithReceiveAddress(ip),
+		)
+		assert.NilError(t, err)
+		defer func() {
+			assert.NilError(t, rx.Close())
+		}()
+		// when the receiver receives
+		var g errgroup.Group
+		g.Go(func() error {
+			return rx.Receive(ctx)
+		})
+		// and transmitter transmits nothing
+		// then the receiver should receive context deadline exceeded error.
+		assert.ErrorIs(t, g.Wait(), context.DeadlineExceeded)
+	})
+}
+
 func TestLCM_OneTransmitter_MultipleReceivers(t *testing.T) {
 	// setup
 	const testTimeout = 1 * time.Second
