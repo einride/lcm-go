@@ -123,13 +123,9 @@ func (r *Receiver) Receive(ctx context.Context) error {
 	r.protoMessage = nil
 	if r.messageBufIndex >= r.messageBufSize {
 		r.messageBufIndex = 0
-		deadline, _ := ctx.Deadline()
-		if err := r.conn.SetReadDeadline(deadline); err != nil {
-			return fmt.Errorf("receive on LCM: %w", err)
-		}
-		n, err := r.conn.ReadBatch(r.messageBuf, 0)
+		n, err := r.read(ctx)
 		if err != nil {
-			return fmt.Errorf("receive on LCM: %w", err)
+			return err
 		}
 		r.messageBufSize = n
 	}
@@ -157,6 +153,18 @@ func (r *Receiver) Receive(ctx context.Context) error {
 		r.currMessage.Data = data
 	}
 	return nil
+}
+
+func (r *Receiver) read(ctx context.Context) (int, error) {
+	deadline, _ := ctx.Deadline()
+	if err := r.conn.SetReadDeadline(deadline); err != nil {
+		return 0, fmt.Errorf("receive on LCM: %w", err)
+	}
+	n, err := r.conn.ReadBatch(r.messageBuf, 0)
+	if err != nil {
+		return n, fmt.Errorf("receive on LCM: %w", err)
+	}
+	return n, nil
 }
 
 // Receive a proto LCM message. The channel is assumed to be a fully-qualified message name.
