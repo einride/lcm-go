@@ -6,6 +6,7 @@ import (
 	"net"
 	"runtime"
 	"strings"
+	"time"
 
 	"go.einride.tech/lcm/compression/lcmlz4"
 	"golang.org/x/net/bpf"
@@ -118,7 +119,7 @@ type Receiver struct {
 
 // Receive an LCM message.
 //
-// If the provided context has a deadline, it will be propagated to the underlying read operation.
+// Receive blocks until a message arrives, ctx is canceled, or its deadline expires.
 func (r *Receiver) Receive(ctx context.Context) error {
 	r.protoMessage = nil
 	if r.messageBufIndex >= r.messageBufSize {
@@ -156,12 +157,35 @@ func (r *Receiver) Receive(ctx context.Context) error {
 }
 
 func (r *Receiver) read(ctx context.Context) (int, error) {
-	deadline, _ := ctx.Deadline()
-	if err := r.conn.SetReadDeadline(deadline); err != nil {
-		return 0, fmt.Errorf("receive on LCM: %w", err)
-	}
+	// start background routine that terminates in-progress read if
+	// context is canceled.
+	waitDone := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		select {
+		case <-ctx.Done():
+			// force the connection to terminate in-progress reads by setting a deadline
+			// in the past.
+			_ = r.conn.SetReadDeadline(time.Unix(1, 0))
+		case <-waitDone:
+			// read finished naturally, nothing to do.
+		}
+	}()
 	n, err := r.conn.ReadBatch(r.messageBuf, 0)
+
+	// clean up - shut down background thread
+	close(waitDone)
+	<-done
+	// reset the read deadline (ie. no read deadline).
+	_ = r.conn.SetReadDeadline(time.Time{})
+
 	if err != nil {
+		// The read failed because context was canceled and the read terminated,
+		// return that error.
+		if ctx.Err() != nil {
+			return n, fmt.Errorf("receive on LCM: %w", ctx.Err())
+		}
 		return n, fmt.Errorf("receive on LCM: %w", err)
 	}
 	return n, nil
